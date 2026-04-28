@@ -10,6 +10,7 @@ class AuthViewModel : ViewModel() {
     private val _userState = MutableStateFlow(User())
     val userState: StateFlow<User> = _userState.asStateFlow()
 
+    //
     private val _registeredUsers = mutableListOf<User>()
 
     fun onEmailChange(email: String) {

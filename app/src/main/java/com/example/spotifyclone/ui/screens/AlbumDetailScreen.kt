@@ -25,8 +25,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.spotifyclone.R
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun AlbumDetailScreen(navController: NavHostController) {
     val songs = listOf(
         Song("Sea Bendito", "Miel San Marcos"),

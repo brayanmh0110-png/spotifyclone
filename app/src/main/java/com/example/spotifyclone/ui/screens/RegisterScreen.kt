@@ -27,6 +27,7 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     val userState by authViewModel.userState.collectAsState()
     var showEmailFields by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -76,11 +77,22 @@ fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewMode
                 EmailRegistrationForm(
                     email = userState.email,
                     password = userState.password,
-                    onEmailChange = { authViewModel.onEmailChange(it) },
-                    onPasswordChange = { authViewModel.onPasswordChange(it) },
+                    errorMessage = errorMessage,
+                    onEmailChange = { 
+                        authViewModel.onEmailChange(it)
+                        errorMessage = null 
+                    },
+                    onPasswordChange = { 
+                        authViewModel.onPasswordChange(it)
+                        errorMessage = null
+                    },
                     onRegisterClick = {
-                        if (authViewModel.register()) {
+                        if (userState.email.isBlank() || userState.password.isBlank()) {
+                            errorMessage = "Faltan datos: correo y/o contraseña"
+                        } else if (authViewModel.register()) {
                             navController.navigate(Screen.Home.route)
+                        } else {
+                            errorMessage = "El correo ya está registrado"
                         }
                     }
                 )
@@ -128,6 +140,7 @@ fun SocialRegisterButtons(onEmailClick: () -> Unit) {
 fun EmailRegistrationForm(
     email: String,
     password: String,
+    errorMessage: String?,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onRegisterClick: () -> Unit
@@ -161,11 +174,21 @@ fun EmailRegistrationForm(
             ),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
         )
+        
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage,
+                color = Color.Red,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
         Button(
             onClick = onRegisterClick,
             modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954)),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954)),//
             shape = CircleShape
         ) {
             Text("Registrarse", color = Color.Black, fontWeight = FontWeight.Bold)
@@ -187,7 +210,7 @@ fun RegisterButton(
             .fillMaxWidth()
             .height(56.dp),
         colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
-        shape = CircleShape,
+        shape =CircleShape,
         border = border
     ) {
         Text(text = text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
