@@ -33,8 +33,9 @@ fun HomeScreen(navController: NavHostController) {
     var selectedFilter by remember { mutableStateOf("Todas") }
 
     Scaffold(
+        
         containerColor = Color.Black,
-        topBar = { HomeTopBar(selectedFilter) { selectedFilter = it } },
+        topBar = { HomeTopBar(navController, selectedFilter) { selectedFilter = it } },
         bottomBar = { HomeBottomBar() }
     ) { padding ->
         LazyColumn(
@@ -76,7 +77,9 @@ fun HomeScreen(navController: NavHostController) {
                     "Redimi2" to R.drawable.redimimix,
                     "Barak" to R.drawable.barakmix, // Usa mielsan mientras consigues las otras fotos
                     "Marco Barrientos" to R.drawable.marcosmix,
-                    "Miel San Marcos" to R.drawable.mielmix
+                    "Miel San Marcos" to R.drawable.mielmix,
+                    "Averly Morillo" to R.drawable.averlymix,
+                    "Waleska Morales" to R.drawable.waleskamix
                 )
 
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -110,7 +113,11 @@ fun HomeScreen(navController: NavHostController) {
 }
 
 @Composable
-fun HomeTopBar(selectedFilter: String, onFilterClick: (String) -> Unit) {
+fun HomeTopBar(
+    navController: NavHostController, // 1. Agregamos el controlador para la navegación
+    selectedFilter: String,
+    onFilterClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -122,10 +129,19 @@ fun HomeTopBar(selectedFilter: String, onFilterClick: (String) -> Unit) {
                 modifier = Modifier
                     .size(35.dp)
                     .clip(CircleShape)
-                    .background(Color.Gray),
+                    .background(Color.Gray)
+                    .clickable{
+                        navController.navigate(Screen.Panelusu.route)
+                    },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Person, contentDescription = null, tint = Color.White)
+                Image(
+                    painter = painterResource(id = R.drawable.perfil),
+                    contentDescription = "Perfil",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                //aqui agregar imagen
             }
             Spacer(modifier = Modifier.width(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -18,6 +18,7 @@ sealed class Screen(val route: String) {
     data object LoginEmail : Screen("login_email")
     data object Home : Screen("home")
     data object AlbumDetail : Screen("album_detail")
+    data object Panelusu : Screen("panel_usu")
 }
 
 @Composable
@@ -69,6 +70,10 @@ fun SpotifyNavHost(
         
         composable(Screen.AlbumDetail.route) {
             AlbumDetailScreen(navController = navController)
+        }
+        
+        composable(Screen.Panelusu.route) {
+            PanelUsuScreen(navController = navController)
         }
     }
 }
