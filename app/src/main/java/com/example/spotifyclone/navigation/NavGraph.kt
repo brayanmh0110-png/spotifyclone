@@ -11,6 +11,8 @@ import androidx.compose.material3.Text
 import com.example.spotifyclone.ui.screens.*
 import com.example.spotifyclone.viewmodel.AuthViewModel
 
+ // Definición de las rutas de la aplicación (Sealed Class)
+// Esto asegura que solo existan rutas predefinidas y evita errores de escritura.
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
     data object Register : Screen("register")
@@ -19,6 +21,7 @@ sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object AlbumDetail : Screen("album_detail")
     data object Panelusu : Screen("panel_usu")
+    data object LikedSongs : Screen("liked_songs")
 }
 
 @Composable
@@ -27,11 +30,13 @@ fun SpotifyNavHost(
     authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
+    // NavHost: El contenedor principal que gestiona qué pantalla se muestra según la ruta actual.
     NavHost(
         navController = navController,
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
+        // Cada 'composable' registra una pantalla en el grafo de navegación.
         composable(Screen.Welcome.route) {
             WelcomeScreen(navController = navController)
         }
@@ -39,6 +44,7 @@ fun SpotifyNavHost(
         composable(
             route = Screen.Register.route,
             enterTransition = {
+                // Animación de entrada: la pantalla se desliza desde la derecha.
                 slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Right,
                     animationSpec = tween(500)
@@ -74,6 +80,10 @@ fun SpotifyNavHost(
         
         composable(Screen.Panelusu.route) {
             PanelUsuScreen(navController = navController)
+        }
+        
+        composable(Screen.LikedSongs.route) {
+            LikedSongsScreen(navController = navController)
         }
     }
 }

@@ -50,7 +50,12 @@ fun HomeScreen(navController: NavHostController) {
             item {
                 Column {
                     Row(Modifier.fillMaxWidth()) {
-                        HomeGridItem("Tus me gustas", R.drawable.corazon, Modifier.weight(1f))
+                        HomeGridItem(
+                            "Tus me gustas",
+                            R.drawable.corazon,
+                            Modifier.weight(1f),
+                            onClick = { navController.navigate(Screen.LikedSongs.route) }
+                        )
                         Spacer(Modifier.width(8.dp))
                         HomeGridItem(
                             "Dios de Generaciones",
