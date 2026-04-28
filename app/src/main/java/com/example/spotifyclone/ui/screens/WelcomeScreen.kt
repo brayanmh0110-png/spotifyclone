@@ -87,5 +87,6 @@ fun WelcomeScreen(navController: NavHostController) {
         }
         
         Spacer(modifier = Modifier.height(32.dp))
+        /////wewewe
     }
 }
