@@ -29,31 +29,31 @@ import com.example.spotifyclone.R
 @Composable
 fun AlbumDetailScreen(navController: NavHostController) {
     val songs = listOf(
-        Song("Sea Bendito", "Miel San Marcos"),
-        Song("Increíble", "Miel San Marcos"),
-        Song("Agradecido", "Miel San Marcos"),
-        Song("No Hay Lugar Más Alto", "Miel San Marcos"),
-        Song("Danzo En El Río", "Miel San Marcos"),
-        Song("Grande y Fuerte", "Miel San Marcos"),
-        Song("Regocíjate Oh Israel", "Miel San Marcos"),
-        Song("Levántate Señor", "Miel San Marcos"),
-        Song("Vino Celestial", "Miel San Marcos"),
-        Song("Proclamaré Victoria", "Miel San Marcos"),
-        Song("Jehová de los Ejércitos", "Miel San Marcos"),
-        Song("El Gozo del Señor", "Miel San Marcos"),
-        Song("Fiesta Hay en el Corazón", "Miel San Marcos"),
-        Song("Digno es el Señor", "Miel San Marcos"),
-        Song("Tu Presencia es el Cielo", "Miel San Marcos"),
-        Song("Amamos tu Presencia", "Miel San Marcos"),
-        Song("Exáltate", "Miel San Marcos"),
-        Song("Glorifícate", "Miel San Marcos"),
-        Song("Soberano", "Miel San Marcos"),
-        Song("Rey Vencedor", "Miel San Marcos"),
-        Song("Abba Padre", "Miel San Marcos"),
-        Song("Eres Dios", "Miel San Marcos"),
-        Song("Canto de Victoria", "Miel San Marcos"),
-        Song("Poderoso Dios", "Miel San Marcos"),
-        Song("Josué 1:9", "Miel San Marcos")
+        Song(title = "Sea Bendito", artist = "Miel San Marcos"),
+        Song(title = "Increíble", artist = "Miel San Marcos"),
+        Song(title = "Agradecido", artist = "Miel San Marcos"),
+        Song(title = "No Hay Lugar Más Alto", artist = "Miel San Marcos"),
+        Song(title = "Danzo En El Río", artist = "Miel San Marcos"),
+        Song(title = "Grande y Fuerte", artist = "Miel San Marcos"),
+        Song(title = "Regocíjate Oh Israel", artist = "Miel San Marcos"),
+        Song(title = "Levántate Señor", artist = "Miel San Marcos"),
+        Song(title = "Vino Celestial", artist = "Miel San Marcos"),
+        Song(title = "Proclamaré Victoria", artist = "Miel San Marcos"),
+        Song(title = "Jehová de los Ejércitos", artist = "Miel San Marcos"),
+        Song(title = "El Gozo del Señor", artist = "Miel San Marcos"),
+        Song(title = "Fiesta Hay en el Corazón", artist = "Miel San Marcos"),
+        Song(title = "Digno es el Señor", artist = "Miel San Marcos"),
+        Song(title = "Tu Presencia es el Cielo", artist = "Miel San Marcos"),
+        Song(title = "Amamos tu Presencia", artist = "Miel San Marcos"),
+        Song(title = "Exáltate", artist = "Miel San Marcos"),
+        Song(title = "Glorifícate", artist = "Miel San Marcos"),
+        Song(title = "Soberano", artist = "Miel San Marcos"),
+        Song(title = "Rey Vencedor", artist = "Miel San Marcos"),
+        Song(title = "Abba Padre", artist = "Miel San Marcos"),
+        Song(title = "Eres Dios", artist = "Miel San Marcos"),
+        Song(title = "Canto de Victoria", artist = "Miel San Marcos"),
+        Song(title = "Poderoso Dios", artist = "Miel San Marcos"),
+        Song(title = "Josué 1:9", artist = "Miel San Marcos")
     )
 
     Scaffold(
@@ -191,7 +191,7 @@ fun SongRow(song: Song) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(text = song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text(text = song.artists, color = Color.Gray, fontSize = 12.sp)
+            Text(text = song.artist, color = Color.Gray, fontSize = 12.sp)
         }
         Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
     }

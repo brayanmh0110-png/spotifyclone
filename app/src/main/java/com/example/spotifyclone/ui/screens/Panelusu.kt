@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,9 +22,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.spotifyclone.R
+import com.example.spotifyclone.viewmodel.AuthViewModel
 
 @Composable
-fun PanelUsuScreen(navController: NavHostController) {
+fun PanelUsuScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,6 +73,9 @@ fun PanelUsuScreen(navController: NavHostController) {
         OptionItem(Icons.Default.History, "Recientes")
         OptionItem(Icons.Default.Campaign, "Tus avisos")
         OptionItem(Icons.Default.Settings, "Configuración y privacidad")
+        OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", onClick = {
+            authViewModel.logout()
+        })
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -149,10 +154,11 @@ fun PanelUsuScreen(navController: NavHostController) {
 }
 
 @Composable
-fun OptionItem(icon: ImageVector, text: String) {
+fun OptionItem(icon: ImageVector, text: String, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

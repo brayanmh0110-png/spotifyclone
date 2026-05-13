@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.spotifyclone.navigation.SpotifyNavHost
 import com.example.spotifyclone.ui.theme.SpotifycloneTheme
 import com.example.spotifyclone.viewmodel.AuthViewModel
+import com.example.spotifyclone.viewmodel.MusicViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,11 +23,13 @@ class MainActivity : ComponentActivity() {
             SpotifycloneTheme {
                 val navController = rememberNavController()
                 val authViewModel: AuthViewModel = viewModel()
+                val musicViewModel: MusicViewModel = viewModel()
                 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     SpotifyNavHost(
                         navController = navController,
                         authViewModel = authViewModel,
+                        musicViewModel = musicViewModel,
                         modifier = Modifier.padding(innerPadding)
                     )
                 }

@@ -26,7 +26,9 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 @Composable
 fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     val userState by authViewModel.userState.collectAsState()
+    val error by authViewModel.error.collectAsState()
     var showEmailFields by remember { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -67,6 +69,11 @@ fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewMode
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
+
+            error?.let {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(it, color = Color.Red, fontSize = 14.sp)
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -74,14 +81,14 @@ fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewMode
                 SocialRegisterButtons(onEmailClick = { showEmailFields = true })
             } else {
                 EmailRegistrationForm(
+                    name = userState.name,
                     email = userState.email,
-                    password = userState.password,
+                    password = password,
+                    onNameChange = { authViewModel.onNameChange(it) },
                     onEmailChange = { authViewModel.onEmailChange(it) },
-                    onPasswordChange = { authViewModel.onPasswordChange(it) },
+                    onPasswordChange = { password = it },
                     onRegisterClick = {
-                        if (authViewModel.register()) {
-                            navController.navigate(Screen.Home.route)
-                        }
+                        authViewModel.register(password)
                     }
                 )
             }
@@ -126,13 +133,28 @@ fun SocialRegisterButtons(onEmailClick: () -> Unit) {
 
 @Composable
 fun EmailRegistrationForm(
+    name: String,
     email: String,
     password: String,
+    onNameChange: (String) -> Unit,
     onEmailChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onRegisterClick: () -> Unit
 ) {
     Column {
+        OutlinedTextField(
+            value = name,
+            onValueChange = onNameChange,
+            label = { Text("Nombre", color = Color.Gray) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.Gray
+            )
+        )
+        Spacer(modifier = Modifier.height(16.dp))
         OutlinedTextField(
             value = email,
             onValueChange = onEmailChange,

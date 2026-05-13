@@ -26,9 +26,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.spotifyclone.R
+import com.example.spotifyclone.viewmodel.AuthViewModel
+import com.example.spotifyclone.viewmodel.MusicViewModel
 
 @Composable
-fun LikedSongsScreen(navController: NavHostController) {
+fun LikedSongsScreen(
+    navController: NavHostController,
+    authViewModel: AuthViewModel,
+    musicViewModel: MusicViewModel
+) {
     val likedSongs = listOf(
         VisualSong("Sea Bendito", "Miel San Marcos", R.drawable.album_generaciones),
         VisualSong("Increíble", "Miel San Marcos", R.drawable.album_generaciones),
@@ -86,7 +92,7 @@ fun LikedSongsScreen(navController: NavHostController) {
                 .padding(padding)
         ) {
             item {
-                LikedHeader()
+                LikedHeader(likedSongs.size)
             }
             items(likedSongs) { song ->
                 LikedSongItem(song)
@@ -97,7 +103,7 @@ fun LikedSongsScreen(navController: NavHostController) {
 }
 
 @Composable
-fun LikedHeader() {
+fun LikedHeader(count: Int) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -116,7 +122,7 @@ fun LikedHeader() {
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "20 canciones",
+            text = "$count canciones",
             color = Color.LightGray,
             fontSize = 14.sp
         )
