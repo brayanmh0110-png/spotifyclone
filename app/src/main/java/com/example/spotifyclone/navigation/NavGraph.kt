@@ -3,9 +3,6 @@ package com.example.spotifyclone.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -34,16 +31,6 @@ fun SpotifyNavHost(
     musicViewModel: MusicViewModel,
     modifier: Modifier = Modifier,
 ) {
-    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-
-    LaunchedEffect(isLoggedIn) {
-        if (isLoggedIn == true) {
-            navController.navigate(Screen.Home.route) {
-                popUpTo(0) { inclusive = true }
-            }
-        }
-    }
-
     // NavHost: El contenedor principal que gestiona qué pantalla se muestra según la ruta actual.
     NavHost(
         navController = navController,

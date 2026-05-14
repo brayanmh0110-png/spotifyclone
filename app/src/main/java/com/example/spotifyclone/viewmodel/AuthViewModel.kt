@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.example.spotifyclone.data.UserPreferencesRepository
 import com.example.spotifyclone.model.User
 import com.example.spotifyclone.repository.AuthRepository
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,7 +72,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 userPrefs.saveUserSession(uid, user.email)
                 _isLoggedIn.value = true
             } else {
-                _error.value = result.exceptionOrNull()?.message
+                _error.value = mapExceptionToMessage(result.exceptionOrNull())
             }
         }
     }
@@ -83,8 +86,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 userPrefs.saveUserSession(uid, user.email)
                 _isLoggedIn.value = true
             } else {
-                _error.value = result.exceptionOrNull()?.message
+                _error.value = mapExceptionToMessage(result.exceptionOrNull())
             }
+        }
+    }
+
+    private fun mapExceptionToMessage(exception: Throwable?): String {
+        return when (exception) {
+            is FirebaseAuthUserCollisionException -> "Este correo ya está registrado."
+            is FirebaseAuthInvalidCredentialsException -> "Credenciales incorrectas. Verifica tu correo y contraseña."
+            is FirebaseAuthInvalidUserException -> "No existe una cuenta con este correo."
+            else -> exception?.localizedMessage ?: "Ha ocurrido un error inesperado."
         }
     }
 
