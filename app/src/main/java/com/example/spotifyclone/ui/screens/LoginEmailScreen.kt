@@ -29,8 +29,9 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 @Composable
 fun LoginEmailScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     val userState by authViewModel.userState.collectAsState()
+    val error by authViewModel.error.collectAsState()
+    var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -92,8 +93,8 @@ fun LoginEmailScreen(navController: NavHostController, authViewModel: AuthViewMo
             )
             
             OutlinedTextField(
-                value = userState.password,
-                onValueChange = { authViewModel.onPasswordChange(it) },
+                value = password,
+                onValueChange = { password = it },
                 modifier = Modifier.fillMaxWidth(),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -114,18 +115,17 @@ fun LoginEmailScreen(navController: NavHostController, authViewModel: AuthViewMo
                 shape = CircleShape
             )
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            error?.let {
+                Text(it, color = Color.Red, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(16.dp))
+            }
             
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Button(
                     onClick = {
-                        if (authViewModel.login()) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Welcome.route) { inclusive = true }
-                            }
-                        } else {
-                            Toast.makeText(context, "Email o contraseña incorrectos", Toast.LENGTH_SHORT).show()
-                        }
+                        authViewModel.login(password)
                     },
                     modifier = Modifier
                         .width(180.dp)

@@ -3,13 +3,16 @@ package com.example.spotifyclone.navigation
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.compose.material3.Text
 import com.example.spotifyclone.ui.screens.*
 import com.example.spotifyclone.viewmodel.AuthViewModel
+import com.example.spotifyclone.viewmodel.MusicViewModel
 
  // Definición de las rutas de la aplicación (Sealed Class)
 // Esto asegura que solo existan rutas predefinidas y evita errores de escritura.
@@ -28,8 +31,19 @@ sealed class Screen(val route: String) {
 fun SpotifyNavHost(
     navController: NavHostController,
     authViewModel: AuthViewModel,
-    modifier: Modifier = Modifier
+    musicViewModel: MusicViewModel,
+    modifier: Modifier = Modifier,
 ) {
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == true) {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
     // NavHost: El contenedor principal que gestiona qué pantalla se muestra según la ruta actual.
     NavHost(
         navController = navController,
@@ -79,16 +93,11 @@ fun SpotifyNavHost(
         }
         
         composable(Screen.Panelusu.route) {
-            PanelUsuScreen(navController = navController)
+            PanelUsuScreen(navController = navController, authViewModel = authViewModel)
         }
         
         composable(Screen.LikedSongs.route) {
-            LikedSongsScreen(navController = navController)
+            LikedSongsScreen(navController = navController, authViewModel = authViewModel, musicViewModel = musicViewModel)
         }
     }
-}
-
-@Composable
-fun PlaceholderScreen(name: String) {
-    Text(text = "This is the $name")
 }
