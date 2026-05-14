@@ -21,13 +21,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.spotifyclone.model.Song
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.spotifyclone.R
+import com.example.spotifyclone.viewmodel.MusicViewModel
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun AlbumDetailScreen(navController: NavHostController) {
+fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicViewModel) {
     val songs = listOf(
         Song(title = "Sea Bendito", artist = "Miel San Marcos"),
         Song(title = "Increíble", artist = "Miel San Marcos"),
@@ -88,7 +90,9 @@ fun AlbumDetailScreen(navController: NavHostController) {
             }
 
             items(songs) { song ->
-                SongRow(song)
+                SongRow(song) {
+                    musicViewModel.playSong(song)
+                }
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -182,10 +186,11 @@ fun ActionButtons() {
 }
 
 @Composable
-fun SongRow(song: Song) {
+fun SongRow(song: Song, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

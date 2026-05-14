@@ -23,6 +23,22 @@ class MusicViewModel : ViewModel() {
     private val _favorites = MutableStateFlow<List<Song>>(emptyList())
     val favorites: StateFlow<List<Song>> = _favorites.asStateFlow()
 
+    // Estado para el mini-reproductor
+    private val _currentSong = MutableStateFlow<Song?>(null)
+    val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
+
+    private val _isPlaying = MutableStateFlow(false)
+    val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
+
+    fun playSong(song: Song) {
+        _currentSong.value = song
+        _isPlaying.value = true
+    }
+
+    fun togglePlayPause() {
+        _isPlaying.value = !_isPlaying.value
+    }
+
     init {
         loadGenres()
     }

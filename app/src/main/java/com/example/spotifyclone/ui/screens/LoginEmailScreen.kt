@@ -30,8 +30,17 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 fun LoginEmailScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     val userState by authViewModel.userState.collectAsState()
     val error by authViewModel.error.collectAsState()
+    val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn == true) {
+            navController.navigate(Screen.Home.route) {
+                popUpTo(Screen.Welcome.route) { inclusive = true }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {

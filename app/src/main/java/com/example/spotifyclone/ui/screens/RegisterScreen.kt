@@ -27,6 +27,7 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewModel) {
     val userState by authViewModel.userState.collectAsState()
     var showEmailFields by remember { mutableStateOf(false) }
+    var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
@@ -71,28 +72,44 @@ fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewMode
             
             Spacer(modifier = Modifier.height(32.dp))
 
+            val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
+            val authError by authViewModel.error.collectAsState()
+
+            LaunchedEffect(isLoggedIn) {
+                if (isLoggedIn == true) {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Welcome.route) { inclusive = true }
+                    }
+                }
+            }
+
+            LaunchedEffect(authError) {
+                authError?.let {
+                    errorMessage = it
+                    authViewModel.clearError()
+                }
+            }
+
             if (!showEmailFields) {
                 SocialRegisterButtons(onEmailClick = { showEmailFields = true })
             } else {
                 EmailRegistrationForm(
                     email = userState.email,
-                    password = userState.password,
+                    password = password,
                     errorMessage = errorMessage,
                     onEmailChange = { 
                         authViewModel.onEmailChange(it)
                         errorMessage = null 
                     },
                     onPasswordChange = { 
-                        authViewModel.onPasswordChange(it)
+                        password = it
                         errorMessage = null
                     },
                     onRegisterClick = {
-                        if (userState.email.isBlank() || userState.password.isBlank()) {
+                        if (userState.email.isBlank() || password.isBlank()) {
                             errorMessage = "Faltan datos: correo y/o contraseña"
-                        } else if (authViewModel.register()) {
-                            navController.navigate(Screen.Home.route)
                         } else {
-                            errorMessage = "El correo ya está registrado"
+                            authViewModel.register(password)
                         }
                     }
                 )

@@ -89,7 +89,7 @@ fun SpotifyNavHost(
         }
         
         composable(Screen.AlbumDetail.route) {
-            AlbumDetailScreen(navController = navController)
+            AlbumDetailScreen(navController = navController, musicViewModel = musicViewModel)
         }
         
         composable(Screen.Panelusu.route) {

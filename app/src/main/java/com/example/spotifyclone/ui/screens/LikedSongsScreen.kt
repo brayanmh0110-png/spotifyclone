@@ -2,6 +2,7 @@ package com.example.spotifyclone.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -28,6 +29,7 @@ import androidx.navigation.NavHostController
 import com.example.spotifyclone.R
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
+import com.example.spotifyclone.model.Song as MusicSong
 
 @Composable
 fun LikedSongsScreen(
@@ -95,7 +97,14 @@ fun LikedSongsScreen(
                 LikedHeader(likedSongs.size)
             }
             items(likedSongs) { song ->
-                LikedSongItem(song)
+                LikedSongItem(song) {
+                    musicViewModel.playSong(
+                        MusicSong(
+                            title = song.title,
+                            artist = song.artist
+                        )
+                    )
+                }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
         }
@@ -151,10 +160,11 @@ fun LikedHeader(count: Int) {
 }
 
 @Composable
-fun LikedSongItem(song: VisualSong) {
+fun LikedSongItem(song: VisualSong, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
