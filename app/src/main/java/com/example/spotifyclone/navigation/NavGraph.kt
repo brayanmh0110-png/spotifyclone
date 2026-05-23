@@ -22,6 +22,7 @@ sealed class Screen(val route: String) {
     data object AlbumDetail : Screen("album_detail")
     data object Panelusu : Screen("panel_usu")
     data object LikedSongs : Screen("liked_songs")
+    data object Player : Screen("player")
 }
 
 @Composable
@@ -72,7 +73,7 @@ fun SpotifyNavHost(
         }
         
         composable(Screen.Home.route) {
-            HomeScreen(navController = navController)
+            HomeScreen(navController = navController, musicViewModel = musicViewModel)
         }
         
         composable(Screen.AlbumDetail.route) {
@@ -85,6 +86,24 @@ fun SpotifyNavHost(
         
         composable(Screen.LikedSongs.route) {
             LikedSongsScreen(navController = navController, authViewModel = authViewModel, musicViewModel = musicViewModel)
+        }
+
+        composable(
+            route = Screen.Player.route,
+            enterTransition = {
+                slideIntoContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
+                    animationSpec = tween(500)
+                )
+            },
+            exitTransition = {
+                slideOutOfContainer(
+                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
+                    animationSpec = tween(500)
+                )
+            }
+        ) {
+            PlayerScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
     }
 }

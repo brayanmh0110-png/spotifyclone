@@ -26,36 +26,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.ContentScale
 import com.example.spotifyclone.R
 import com.example.spotifyclone.viewmodel.MusicViewModel
+import coil.compose.AsyncImage
+import com.example.spotifyclone.model.Album
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicViewModel) {
-    val songs = listOf(
-        Song(title = "Sea Bendito", artist = "Miel San Marcos"),
-        Song(title = "Increíble", artist = "Miel San Marcos"),
-        Song(title = "Agradecido", artist = "Miel San Marcos"),
-        Song(title = "No Hay Lugar Más Alto", artist = "Miel San Marcos"),
-        Song(title = "Danzo En El Río", artist = "Miel San Marcos"),
-        Song(title = "Grande y Fuerte", artist = "Miel San Marcos"),
-        Song(title = "Regocíjate Oh Israel", artist = "Miel San Marcos"),
-        Song(title = "Levántate Señor", artist = "Miel San Marcos"),
-        Song(title = "Vino Celestial", artist = "Miel San Marcos"),
-        Song(title = "Proclamaré Victoria", artist = "Miel San Marcos"),
-        Song(title = "Jehová de los Ejércitos", artist = "Miel San Marcos"),
-        Song(title = "El Gozo del Señor", artist = "Miel San Marcos"),
-        Song(title = "Fiesta Hay en el Corazón", artist = "Miel San Marcos"),
-        Song(title = "Digno es el Señor", artist = "Miel San Marcos"),
-        Song(title = "Tu Presencia es el Cielo", artist = "Miel San Marcos"),
-        Song(title = "Amamos tu Presencia", artist = "Miel San Marcos"),
-        Song(title = "Exáltate", artist = "Miel San Marcos"),
-        Song(title = "Glorifícate", artist = "Miel San Marcos"),
-        Song(title = "Soberano", artist = "Miel San Marcos"),
-        Song(title = "Rey Vencedor", artist = "Miel San Marcos"),
-        Song(title = "Abba Padre", artist = "Miel San Marcos"),
-        Song(title = "Eres Dios", artist = "Miel San Marcos"),
-        Song(title = "Canto de Victoria", artist = "Miel San Marcos"),
-        Song(title = "Poderoso Dios", artist = "Miel San Marcos"),
-        Song(title = "Josué 1:9", artist = "Miel San Marcos")
+    val songs by musicViewModel.albumSongs.collectAsState()
+    val albums by musicViewModel.albums.collectAsState()
+    
+    // For now, let's assume we show the first album if available
+    val album = albums.firstOrNull() ?: Album(
+        title = "Dios de Generaciones (En Vivo)",
+        artist = "Miel San Marcos",
+        coverUrl = "" // Fallback
     )
 
     Scaffold(
@@ -78,11 +64,11 @@ fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicVie
                 .padding(padding)
         ) {
             item {
-                AlbumHeader()
+                AlbumHeader(album.coverUrl)
             }
 
             item {
-                AlbumInfo()
+                AlbumInfo(album)
             }
 
             item {
@@ -101,7 +87,7 @@ fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicVie
 }
 
 @Composable
-fun AlbumHeader() {
+fun AlbumHeader(coverUrl: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -118,21 +104,30 @@ fun AlbumHeader() {
             shadowElevation = 8.dp,
             color = Color.DarkGray
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.album_generaciones),
-                contentDescription = "Portada del Álbum",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
+            if (coverUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = "Portada del Álbum",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.album_generaciones),
+                    contentDescription = "Portada del Álbum",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
 }
 
 @Composable
-fun AlbumInfo() {
+fun AlbumInfo(album: Album) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(
-            text = "Dios de Generaciones (En Vivo)",
+            text = album.title,
             color = Color.White,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
@@ -148,10 +143,10 @@ fun AlbumInfo() {
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(text = "Miel San Marcos", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(text = album.artist, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Álbum · 1 ene. 2025", color = Color.Gray, fontSize = 14.sp)
+        Text(text = "Álbum · ${album.releaseDate}", color = Color.Gray, fontSize = 14.sp)
     }
 }
 

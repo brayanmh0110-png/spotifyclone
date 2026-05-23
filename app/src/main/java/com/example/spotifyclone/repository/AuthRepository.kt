@@ -40,7 +40,20 @@ class AuthRepository {
     fun logout() {
         auth.signOut()
     }
+
+    suspend fun getUserProfile(uid: String): User? {
+        return try {
+            val snapshot = firestore.collection("users").document(uid).get().await()
+            snapshot.toObject(User::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
     
+    fun getCurrentUserUid(): String? {
+        return auth.currentUser?.uid
+    }
+
     fun validateEmail(email: String): Boolean {
         return android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }

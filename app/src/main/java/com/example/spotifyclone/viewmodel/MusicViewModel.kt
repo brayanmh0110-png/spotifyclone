@@ -2,10 +2,14 @@ package com.example.spotifyclone.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.spotifyclone.model.Album
+import com.example.spotifyclone.model.Artist
 import com.example.spotifyclone.model.Genre
 import com.example.spotifyclone.model.Playlist
 import com.example.spotifyclone.model.Song
 import com.example.spotifyclone.repository.MusicRepository
+import android.media.MediaPlayer
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +24,15 @@ class MusicViewModel : ViewModel() {
     private val _genres = MutableStateFlow<List<Genre>>(emptyList())
     val genres: StateFlow<List<Genre>> = _genres.asStateFlow()
 
+    private val _artists = MutableStateFlow<List<Artist>>(emptyList())
+    val artists: StateFlow<List<Artist>> = _artists.asStateFlow()
+
+    private val _albums = MutableStateFlow<List<Album>>(emptyList())
+    val albums: StateFlow<List<Album>> = _albums.asStateFlow()
+
+    private val _albumSongs = MutableStateFlow<List<Song>>(emptyList())
+    val albumSongs: StateFlow<List<Song>> = _albumSongs.asStateFlow()
+
     private val _favorites = MutableStateFlow<List<Song>>(emptyList())
     val favorites: StateFlow<List<Song>> = _favorites.asStateFlow()
 
@@ -30,17 +43,88 @@ class MusicViewModel : ViewModel() {
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying: StateFlow<Boolean> = _isPlaying.asStateFlow()
 
+    private val _currentPosition = MutableStateFlow(0f)
+    val currentPosition: StateFlow<Float> = _currentPosition.asStateFlow()
+
+    private val _duration = MutableStateFlow(0f)
+    val duration: StateFlow<Float> = _duration.asStateFlow()
+
+    private var mediaPlayer: MediaPlayer? = null
+
     fun playSong(song: Song) {
-        _currentSong.value = song
-        _isPlaying.value = true
+        if (song.audioUrl.isEmpty()) return
+
+        // Detener canción actual si existe
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
+
+        try {
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(song.audioUrl)
+                prepareAsync()
+                setOnPreparedListener {
+                    start()
+                    _currentSong.value = song
+                    _isPlaying.value = true
+                    _duration.value = duration.toFloat()
+                    updateProgress()
+                }
+                setOnCompletionListener {
+                    _isPlaying.value = false
+                    _currentPosition.value = 0f
+                }
+                setOnErrorListener { _, _, _ ->
+                    _isPlaying.value = false
+                    false
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            _isPlaying.value = false
+        }
     }
 
     fun togglePlayPause() {
-        _isPlaying.value = !_isPlaying.value
+        mediaPlayer?.let {
+            if (it.isPlaying) {
+                it.pause()
+                _isPlaying.value = false
+            } else {
+                it.start()
+                _isPlaying.value = true
+                updateProgress()
+            }
+        }
+    }
+
+    fun seekTo(position: Float) {
+        mediaPlayer?.seekTo(position.toInt())
+        _currentPosition.value = position
+    }
+
+    private fun updateProgress() {
+        viewModelScope.launch {
+            while (_isPlaying.value) {
+                mediaPlayer?.let {
+                    _currentPosition.value = it.currentPosition.toFloat()
+                }
+                delay(1000)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
 
     init {
         loadGenres()
+        loadArtists()
+        loadAlbums()
+        loadSongs()
     }
 
     private fun loadGenres() {
@@ -48,6 +132,36 @@ class MusicViewModel : ViewModel() {
             repository.getGenres().collect {
                 _genres.value = it
             }
+        }
+    }
+
+    private fun loadArtists() {
+        viewModelScope.launch {
+            repository.getArtists().collect {
+                _artists.value = it
+            }
+        }
+    }
+
+    private fun loadAlbums() {
+        viewModelScope.launch {
+            repository.getAlbums().collect {
+                _albums.value = it
+            }
+        }
+    }
+
+    private fun loadSongs() {
+        viewModelScope.launch {
+            repository.getSongs().collect {
+                _songs.value = it
+            }
+        }
+    }
+
+    fun loadSongsByAlbum(songIds: List<String>) {
+        viewModelScope.launch {
+            _albumSongs.value = repository.getSongsByAlbum(songIds)
         }
     }
 

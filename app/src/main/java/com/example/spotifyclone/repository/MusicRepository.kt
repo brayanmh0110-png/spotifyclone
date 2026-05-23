@@ -16,6 +16,32 @@ class MusicRepository {
     private val genresCollection = firestore.collection("genres")
     private val playlistsCollection = firestore.collection("playlists")
     private val activityLogCollection = firestore.collection("activity_log")
+    private val artistsCollection = firestore.collection("artists")
+    private val albumsCollection = firestore.collection("albums")
+
+    // Get all songs
+    fun getSongs(): Flow<List<Song>> = flow {
+        val snapshot = songsCollection.get().await()
+        emit(snapshot.toObjects(Song::class.java))
+    }
+
+    // Get all artists
+    fun getArtists(): Flow<List<Artist>> = flow {
+        val snapshot = artistsCollection.get().await()
+        emit(snapshot.toObjects(Artist::class.java))
+    }
+
+    // Get all albums
+    fun getAlbums(): Flow<List<Album>> = flow {
+        val snapshot = albumsCollection.get().await()
+        emit(snapshot.toObjects(Album::class.java))
+    }
+
+    // Get songs by album
+    suspend fun getSongsByAlbum(songIds: List<String>): List<Song> {
+        if (songIds.isEmpty()) return emptyList()
+        return songsCollection.whereIn("id", songIds).get().await().toObjects(Song::class.java)
+    }
 
     // Seed data (Classic Music)
     suspend fun seedClassicalMusic() {

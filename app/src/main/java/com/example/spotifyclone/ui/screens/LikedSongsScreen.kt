@@ -30,6 +30,10 @@ import com.example.spotifyclone.R
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 import com.example.spotifyclone.model.Song as MusicSong
+import coil.compose.AsyncImage
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 
 @Composable
 fun LikedSongsScreen(
@@ -37,28 +41,14 @@ fun LikedSongsScreen(
     authViewModel: AuthViewModel,
     musicViewModel: MusicViewModel
 ) {
-    val likedSongs = listOf(
-        VisualSong("Sea Bendito", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Increíble", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Agradecido", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("No Hay Lugar Más Alto", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Danzo En El Río", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Grande y Fuerte", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Regocíjate Oh Israel", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Levántate Señor", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Vino Celestial", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Proclamaré Victoria", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Jehová de los Ejércitos", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("El Gozo del Señor", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Fiesta Hay en el Corazón", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Digno es el Señor", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Tu Presencia es el Cielo", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Amamos tu Presencia", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Exáltate", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Glorifícate", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Soberano", "Miel San Marcos", R.drawable.album_generaciones),
-        VisualSong("Rey Vencedor", "Miel San Marcos", R.drawable.album_generaciones)
-    )
+    val favorites by musicViewModel.favorites.collectAsState()
+    val userState by authViewModel.userState.collectAsState()
+
+    LaunchedEffect(userState.uid) {
+        if (userState.uid.isNotEmpty()) {
+            musicViewModel.loadFavorites(userState.uid)
+        }
+    }
 
     Scaffold(
         containerColor = Color.Black,
@@ -94,16 +84,11 @@ fun LikedSongsScreen(
                 .padding(padding)
         ) {
             item {
-                LikedHeader(likedSongs.size)
+                LikedHeader(favorites.size)
             }
-            items(likedSongs) { song ->
+            items(favorites) { song ->
                 LikedSongItem(song) {
-                    musicViewModel.playSong(
-                        MusicSong(
-                            title = song.title,
-                            artist = song.artist
-                        )
-                    )
+                    musicViewModel.playSong(song)
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -160,7 +145,7 @@ fun LikedHeader(count: Int) {
 }
 
 @Composable
-fun LikedSongItem(song: VisualSong, onClick: () -> Unit) {
+fun LikedSongItem(song: MusicSong, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -168,14 +153,25 @@ fun LikedSongItem(song: VisualSong, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Image(
-            painter = painterResource(id = song.imageRes),
-            contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(4.dp)),
-            contentScale = ContentScale.Crop
-        )
+        if (song.coverUrl.isNotEmpty()) {
+            AsyncImage(
+                model = song.coverUrl,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = R.drawable.album_generaciones),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(

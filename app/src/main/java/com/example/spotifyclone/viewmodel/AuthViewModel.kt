@@ -36,7 +36,20 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     private fun checkSession() {
         viewModelScope.launch {
             val savedUid = userPrefs.userUid.first()
-            _isLoggedIn.value = savedUid != null && authRepository.isUserLoggedIn()
+            val isLoggedIn = savedUid != null && authRepository.isUserLoggedIn()
+            _isLoggedIn.value = isLoggedIn
+            if (isLoggedIn && savedUid != null) {
+                fetchUserProfile(savedUid)
+            }
+        }
+    }
+
+    private fun fetchUserProfile(uid: String) {
+        viewModelScope.launch {
+            val user = authRepository.getUserProfile(uid)
+            if (user != null) {
+                _userState.value = user
+            }
         }
     }
 
@@ -70,6 +83,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 val uid = result.getOrThrow()
                 userPrefs.saveUserSession(uid, user.email)
+                fetchUserProfile(uid)
                 _isLoggedIn.value = true
             } else {
                 _error.value = mapExceptionToMessage(result.exceptionOrNull())
@@ -84,6 +98,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             if (result.isSuccess) {
                 val uid = result.getOrThrow()
                 userPrefs.saveUserSession(uid, user.email)
+                fetchUserProfile(uid)
                 _isLoggedIn.value = true
             } else {
                 _error.value = mapExceptionToMessage(result.exceptionOrNull())

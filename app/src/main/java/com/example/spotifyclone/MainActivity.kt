@@ -71,9 +71,12 @@ class MainActivity : ComponentActivity() {
                         )
                         
                         // Si la ruta actual no está en la lista negra, mostramos el mini-player
-                        if (currentRoute !in noPlayerScreens) {
+                        if (currentRoute !in noPlayerScreens && currentRoute != Screen.Player.route) {
                             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                                MiniPlayer(musicViewModel = musicViewModel)
+                                MiniPlayer(
+                                    musicViewModel = musicViewModel,
+                                    navController = navController
+                                )
                             }
                         }
                     }
