@@ -98,7 +98,7 @@ class MusicRepository {
         }
     }
 
-    // Activity Log
+    // Activity Log holaaaaa
     private suspend fun logActivity(userId: String, action: String) {
         val log = ActivityLog(userId = userId, action = action)
         activityLogCollection.add(log).await()
