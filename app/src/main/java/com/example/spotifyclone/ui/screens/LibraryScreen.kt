@@ -77,7 +77,7 @@ fun LibraryScreen(
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(songs) { song ->
                     LibrarySongItem(song) {
-                        musicViewModel.playSong(song)
+                        musicViewModel.playSong(song, songs)
                     }
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }

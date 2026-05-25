@@ -42,6 +42,9 @@ class MusicViewModel : ViewModel() {
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
 
+    private val _currentPlaylist = MutableStateFlow<List<Song>>(emptyList())
+    val currentPlaylist: StateFlow<List<Song>> = _currentPlaylist.asStateFlow()
+
     // Estado para el mini-reproductor
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -57,8 +60,15 @@ class MusicViewModel : ViewModel() {
 
     private var mediaPlayer: MediaPlayer? = null
 
-    fun playSong(song: Song) {
+    fun playSong(song: Song, playlist: List<Song> = emptyList()) {
         if (song.audioUrl.isEmpty()) return
+        
+        if (playlist.isNotEmpty()) {
+            _currentPlaylist.value = playlist
+        } else if (!_currentPlaylist.value.contains(song)) {
+            // Si se reproduce una canción suelta, la lista actual será solo esa canción
+            _currentPlaylist.value = listOf(song)
+        }
 
         // Detener canción actual si existe
         mediaPlayer?.stop()
@@ -77,8 +87,7 @@ class MusicViewModel : ViewModel() {
                     updateProgress()
                 }
                 setOnCompletionListener {
-                    _isPlaying.value = false
-                    _currentPosition.value = 0f
+                    playNextSong()
                 }
                 setOnErrorListener { _, _, _ ->
                     _isPlaying.value = false
@@ -88,6 +97,30 @@ class MusicViewModel : ViewModel() {
         } catch (e: Exception) {
             e.printStackTrace()
             _isPlaying.value = false
+        }
+    }
+
+    fun playNextSong() {
+        val currentList = _currentPlaylist.value
+        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
+        
+        if (currentIndex != -1 && currentIndex < currentList.size - 1) {
+            playSong(currentList[currentIndex + 1])
+        } else if (currentList.isNotEmpty()) {
+            // Si es la última, vuelve a la primera (opcional, estilo Spotify)
+            playSong(currentList[0])
+        }
+    }
+
+    fun playPreviousSong() {
+        val currentList = _currentPlaylist.value
+        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
+        
+        if (currentIndex > 0) {
+            playSong(currentList[currentIndex - 1])
+        } else if (currentList.isNotEmpty()) {
+            // Si es la primera, va a la última
+            playSong(currentList.last())
         }
     }
 

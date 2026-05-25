@@ -88,7 +88,7 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         items(songs) { song ->
                             SongItem(song = song) {
-                                musicViewModel.playSong(song)
+                                musicViewModel.playSong(song, songs)
                             }
                         }
                     }

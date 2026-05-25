@@ -93,7 +93,7 @@ fun SearchScreen(
             ) {
                 items(searchResults) { song ->
                     SearchSongItem(song) {
-                        musicViewModel.playSong(song)
+                        musicViewModel.playSong(song, searchResults)
                     }
                 }
                 item { Spacer(modifier = Modifier.height(80.dp)) }

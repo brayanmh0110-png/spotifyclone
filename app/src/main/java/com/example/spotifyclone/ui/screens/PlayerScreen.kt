@@ -152,7 +152,7 @@ fun PlayerScreen(
             IconButton(onClick = { }) {
                 Icon(Icons.Default.Shuffle, contentDescription = "Aleatorio", tint = Color.LightGray, modifier = Modifier.size(24.dp))
             }
-            IconButton(onClick = { }) {
+            IconButton(onClick = { musicViewModel.playPreviousSong() }) {
                 Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
             }
             Box(
@@ -170,7 +170,7 @@ fun PlayerScreen(
                     modifier = Modifier.size(40.dp)
                 )
             }
-            IconButton(onClick = { }) {
+            IconButton(onClick = { musicViewModel.playNextSong() }) {
                 Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
             }
             IconButton(onClick = { }) {

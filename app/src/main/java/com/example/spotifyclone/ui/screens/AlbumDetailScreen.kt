@@ -37,11 +37,11 @@ fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicVie
     val songs by musicViewModel.albumSongs.collectAsState()
     val albums by musicViewModel.albums.collectAsState()
     
-    // For now, let's assume we show the first album if available
+    // Mostramos el álbum actual
     val album = albums.firstOrNull() ?: Album(
-        title = "Dios de Generaciones (En Vivo)",
-        artist = "Miel San Marcos",
-        coverUrl = "" // Fallback
+        title = "Cargando...",
+        artist = "...",
+        coverUrl = ""
     )
 
     Scaffold(
@@ -77,7 +77,7 @@ fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicVie
 
             items(songs) { song ->
                 SongRow(song) {
-                    musicViewModel.playSong(song)
+                    musicViewModel.playSong(song, songs)
                 }
             }
 
@@ -134,14 +134,18 @@ fun AlbumInfo(album: Album) {
         )
         Spacer(modifier = Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = R.drawable.mielsan),
-                contentDescription = "Artista",
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
+            if (album.coverUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = album.coverUrl,
+                    contentDescription = "Artista",
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(modifier = Modifier.size(24.dp).clip(CircleShape).background(Color.Gray))
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = album.artist, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }

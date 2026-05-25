@@ -88,7 +88,7 @@ fun LikedSongsScreen(
             }
             items(favorites) { song ->
                 LikedSongItem(song) {
-                    musicViewModel.playSong(song)
+                    musicViewModel.playSong(song, favorites)
                 }
             }
             item { Spacer(modifier = Modifier.height(32.dp)) }
