@@ -15,9 +15,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel central para la gestión de música y el estado del reproductor.
+ * Utiliza StateFlow para exponer datos reactivos a la interfaz de usuario.
+ */
 class MusicViewModel : ViewModel() {
     private val repository = MusicRepository()
 
+    // Estados de datos (Listas cargadas de Firestore)
     private val _songs = MutableStateFlow<List<Song>>(emptyList())
     val songs: StateFlow<List<Song>> = _songs.asStateFlow()
 
@@ -45,7 +50,7 @@ class MusicViewModel : ViewModel() {
     private val _currentPlaylist = MutableStateFlow<List<Song>>(emptyList())
     val currentPlaylist: StateFlow<List<Song>> = _currentPlaylist.asStateFlow()
 
-    // Estado para el mini-reproductor
+    // Estados del Reproductor
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
 
@@ -60,17 +65,22 @@ class MusicViewModel : ViewModel() {
 
     private var mediaPlayer: MediaPlayer? = null
 
+    /**
+     * Inicia la reproducción de una canción.
+     * @param song La canción a reproducir.
+     * @param playlist La lista de canciones actual (opcional) para habilitar Siguiente/Anterior.
+     */
     fun playSong(song: Song, playlist: List<Song> = emptyList()) {
         if (song.audioUrl.isEmpty()) return
         
+        // Actualizamos la cola de reproducción actual
         if (playlist.isNotEmpty()) {
             _currentPlaylist.value = playlist
         } else if (!_currentPlaylist.value.contains(song)) {
-            // Si se reproduce una canción suelta, la lista actual será solo esa canción
             _currentPlaylist.value = listOf(song)
         }
 
-        // Detener canción actual si existe
+        // Liberar el reproductor anterior si existía
         mediaPlayer?.stop()
         mediaPlayer?.release()
         mediaPlayer = null
@@ -78,15 +88,16 @@ class MusicViewModel : ViewModel() {
         try {
             mediaPlayer = MediaPlayer().apply {
                 setDataSource(song.audioUrl)
-                prepareAsync()
+                prepareAsync() // Carga el audio en segundo plano
                 setOnPreparedListener {
                     start()
                     _currentSong.value = song
                     _isPlaying.value = true
                     _duration.value = duration.toFloat()
-                    updateProgress()
+                    updateProgress() // Inicia el seguimiento de la barra de tiempo
                 }
                 setOnCompletionListener {
+                    // Al terminar la canción, pasa automáticamente a la siguiente
                     playNextSong()
                 }
                 setOnErrorListener { _, _, _ ->
@@ -100,30 +111,9 @@ class MusicViewModel : ViewModel() {
         }
     }
 
-    fun playNextSong() {
-        val currentList = _currentPlaylist.value
-        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
-        
-        if (currentIndex != -1 && currentIndex < currentList.size - 1) {
-            playSong(currentList[currentIndex + 1])
-        } else if (currentList.isNotEmpty()) {
-            // Si es la última, vuelve a la primera (opcional, estilo Spotify)
-            playSong(currentList[0])
-        }
-    }
-
-    fun playPreviousSong() {
-        val currentList = _currentPlaylist.value
-        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
-        
-        if (currentIndex > 0) {
-            playSong(currentList[currentIndex - 1])
-        } else if (currentList.isNotEmpty()) {
-            // Si es la primera, va a la última
-            playSong(currentList.last())
-        }
-    }
-
+    /**
+     * Alterna entre Play y Pause en la canción actual.
+     */
     fun togglePlayPause() {
         mediaPlayer?.let {
             if (it.isPlaying) {
@@ -137,11 +127,45 @@ class MusicViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Salta a la siguiente canción en la cola de reproducción.
+     */
+    fun playNextSong() {
+        val currentList = _currentPlaylist.value
+        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
+        
+        if (currentIndex != -1 && currentIndex < currentList.size - 1) {
+            playSong(currentList[currentIndex + 1])
+        } else if (currentList.isNotEmpty()) {
+            playSong(currentList[0]) // Vuelve al inicio si terminó la lista
+        }
+    }
+
+    /**
+     * Salta a la canción anterior en la cola de reproducción.
+     */
+    fun playPreviousSong() {
+        val currentList = _currentPlaylist.value
+        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
+        
+        if (currentIndex > 0) {
+            playSong(currentList[currentIndex - 1])
+        } else if (currentList.isNotEmpty()) {
+            playSong(currentList.last()) // Va al final si estaba en la primera
+        }
+    }
+
+    /**
+     * Mueve el progreso de la canción a una posición específica (SeekBar).
+     */
     fun seekTo(position: Float) {
         mediaPlayer?.seekTo(position.toInt())
         _currentPosition.value = position
     }
 
+    /**
+     * Actualiza el estado de la posición actual del audio cada segundo.
+     */
     private fun updateProgress() {
         viewModelScope.launch {
             while (_isPlaying.value) {
@@ -153,6 +177,9 @@ class MusicViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Limpieza del reproductor cuando el ViewModel se destruye.
+     */
     override fun onCleared() {
         super.onCleared()
         mediaPlayer?.release()
@@ -160,13 +187,12 @@ class MusicViewModel : ViewModel() {
     }
 
     init {
-        // Primero cargamos lo que haya en Firestore para que la UI no esté vacía
+        // Al iniciar, cargamos los datos existentes y lanzamos el sembrado automático
         loadGenres()
         loadArtists()
         loadAlbums()
         loadSongs()
         
-        // Luego, en segundo plano, verificamos y sembramos si es necesario
         viewModelScope.launch {
             seedData() 
         }
@@ -204,25 +230,37 @@ class MusicViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Carga las canciones de un álbum específico.
+     */
     fun loadSongsByAlbum(songIds: List<String>) {
         viewModelScope.launch {
             _albumSongs.value = repository.getSongsByAlbum(songIds)
         }
     }
 
+    /**
+     * Carga la lista de favoritos del usuario desde el repositorio.
+     */
     fun loadFavorites(userId: String) {
         viewModelScope.launch {
             _favorites.value = repository.getUserFavorites(userId)
         }
     }
 
+    /**
+     * Agrega o quita de favoritos.
+     */
     fun toggleFavorite(userId: String, songId: String) {
         viewModelScope.launch {
             repository.toggleFavorite(userId, songId)
-            loadFavorites(userId) // Refresh
+            loadFavorites(userId) // Refresca la lista local después del cambio
         }
     }
 
+    /**
+     * Realiza una búsqueda de canciones en tiempo real a través del repositorio.
+     */
     fun searchSongs(query: String) {
         if (query.isEmpty()) {
             _searchResults.value = emptyList()
@@ -236,15 +274,20 @@ class MusicViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Ejecuta el proceso de sembrado de datos y recarga las listas una vez finalizado.
+     */
     suspend fun seedData() {
         repository.seedFullProjectData()
-        // Después de sembrar, cargamos los datos reales a la UI
         loadGenres()
         loadArtists()
         loadAlbums()
         loadSongs()
     }
 
+    /**
+     * Actualiza metadatos de una playlist.
+     */
     fun updatePlaylist(userId: String, playlist: Playlist) {
         viewModelScope.launch {
             repository.updatePlaylist(userId, playlist)
