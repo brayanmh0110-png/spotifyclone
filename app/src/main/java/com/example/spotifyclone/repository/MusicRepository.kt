@@ -200,4 +200,29 @@ class MusicRepository {
         val snapshot = genresCollection.get().await()
         emit(snapshot.toObjects(Genre::class.java))
     }
+
+    suspend fun searchSongs(query: String): List<Song> = withContext(Dispatchers.IO) {
+        try {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val url = "https://itunes.apple.com/search?term=$encoded&limit=10&entity=song"
+            val json = URL(url).readText()
+            
+            val songs = mutableListOf<Song>()
+            val parts = json.split("{\"wrapperType\":\"track\"").drop(1)
+            
+            for (part in parts) {
+                val title = part.substringAfter("trackName\":\"").substringBefore("\"")
+                val artist = part.substringAfter("artistName\":\"").substringBefore("\"")
+                val cover = part.substringAfter("artworkUrl100\":\"").substringBefore("\"").replace("100x100", "600x600")
+                val audio = part.substringAfter("previewUrl\":\"").substringBefore("\"")
+                val id = part.substringAfter("trackId\":").substringBefore(",")
+
+                songs.add(Song("search_$id", title, artist, "search", audio, cover, "00:30"))
+            }
+            songs
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emptyList()
+        }
+    }
 }

@@ -36,6 +36,12 @@ class MusicViewModel : ViewModel() {
     private val _favorites = MutableStateFlow<List<Song>>(emptyList())
     val favorites: StateFlow<List<Song>> = _favorites.asStateFlow()
 
+    private val _searchResults = MutableStateFlow<List<Song>>(emptyList())
+    val searchResults: StateFlow<List<Song>> = _searchResults.asStateFlow()
+
+    private val _isSearching = MutableStateFlow(false)
+    val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
+
     // Estado para el mini-reproductor
     private val _currentSong = MutableStateFlow<Song?>(null)
     val currentSong: StateFlow<Song?> = _currentSong.asStateFlow()
@@ -181,6 +187,19 @@ class MusicViewModel : ViewModel() {
         viewModelScope.launch {
             repository.toggleFavorite(userId, songId)
             loadFavorites(userId) // Refresh
+        }
+    }
+
+    fun searchSongs(query: String) {
+        if (query.isEmpty()) {
+            _searchResults.value = emptyList()
+            return
+        }
+        
+        viewModelScope.launch {
+            _isSearching.value = true
+            _searchResults.value = repository.searchSongs(query)
+            _isSearching.value = false
         }
     }
 

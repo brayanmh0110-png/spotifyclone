@@ -24,6 +24,7 @@ Este proyecto es una aplicación de Android inspirada en Spotify, desarrollada c
   - `AuthViewModel.kt`: Gestiona la sesión del usuario.
 - **`ui/screens/`**: 
   - `HomeScreen`: Dashboard principal con mixes y artistas.
+  - `SearchScreen`: Interfaz de búsqueda que consulta la API de iTunes en tiempo real.
   - `LibraryScreen`: Lista completa de las 50 canciones obtenidas.
   - `PlayerScreen`: Reproductor a pantalla completa con controles.
 
@@ -32,16 +33,16 @@ Este proyecto es una aplicación de Android inspirada en Spotify, desarrollada c
 ## 3. Funciones Avanzadas Implementadas
 
 ### A. Sembrado Automático y Paralelo (Seed Data)
-El proyecto cuenta con un sistema inteligente de carga de datos en `MusicRepository.kt`:
-1. **Limpieza**: Al detectar cambios o inicialización, limpia las colecciones de Firestore para evitar datos duplicados o "basura" de pruebas anteriores.
-2. **Búsqueda en Paralelo**: Utiliza corrutinas para buscar 50 canciones simultáneamente mediante peticiones HTTP. Esto reduce el tiempo de carga de minutos a segundos.
-3. **Persistencia**: La información obtenida (portadas HD, audios, nombres) se guarda en Firestore, cumpliendo la regla de que la App solo consume datos de la base de datos propia.
+... (anteriormente documentado)
 
-### B. Integración con iTunes API
-Se utiliza como fuente de datos real para obtener:
-- **Audio Previo**: Archivos MP3 directos (30 segundos).
-- **Metadatos**: Títulos de canciones y nombres de artistas reales.
-- **Arte de Álbum**: URLs de imágenes originales en alta resolución (600x600).
+### B. Sistema de Búsqueda Global (iTunes API)
+Se ha implementado una nueva capacidad de búsqueda:
+1. **Consulta en Tiempo Real**: El usuario puede escribir cualquier término y la App realizará una petición a la API de iTunes.
+2. **Resultados Dinámicos**: Muestra hasta 10 resultados con portadas, nombres y audio real, permitiendo su reproducción instantánea.
+3. **Optimización**: Gestión de estados de carga (`isSearching`) y limpieza de resultados.
+
+### C. Integración con iTunes API
+... (anteriormente documentado)
 
 ### C. Sistema de Biblioteca Dinámica
 La pantalla de Biblioteca consulta la colección `songs` en tiempo real, mostrando el conteo total y permitiendo la reproducción inmediata de cualquier tema.

@@ -9,17 +9,24 @@ Es una API REST pública proporcionada por Apple. En este proyecto, se utiliza e
 Dentro de la función `seedFullProjectData()`, la aplicación realiza peticiones HTTP a la siguiente URL:
 `https://itunes.apple.com/search?term={BUSQUEDA}&limit=1&entity=song`
 
+Para el buscador global, el límite se amplía a 10 resultados para ofrecer variedad.
+
 ## 2. El Proceso de Obtención de Datos
-1. **Consulta**: La App envía el nombre de una canción y artista (ej: "Grupo 5 Motor y Motivo").
-2. **Respuesta JSON**: La API responde con un objeto que contiene toda la información oficial de la canción.
+1. **Consulta**: La App envía el nombre de una canción y artista. En el buscador, se envía el texto que el usuario escribe en tiempo real.
+2. **Respuesta JSON**: La API responde con un objeto que contiene toda la información oficial.
 3. **Mapeo**: Nuestro código extrae los siguientes campos:
     - `trackName`: Nombre real de la canción.
     - `artistName`: Nombre del artista.
     - `artworkUrl100`: La carátula del álbum (que modificamos a 600x600 para mayor calidad).
     - `previewUrl`: El enlace directo al archivo de audio MP3.
-4. **Almacenamiento**: Estos datos se guardan en **Firebase Firestore** para que la aplicación sea robusta y no dependa de la API en cada segundo.
+4. **Almacenamiento/Visualización**: Los datos del sembrado se guardan en **Firestore**, mientras que los resultados del buscador se muestran dinámicamente en la UI.
 
-## 3. ¿Por qué las canciones duran 30 segundos?
+## 3. Buscador Global en Tiempo Real
+El buscador utiliza la misma infraestructura que el sembrado de datos, pero de forma reactiva:
+- Cada vez que el usuario escribe, el `MusicViewModel` activa un flujo asíncrono.
+- Se obtienen resultados frescos directamente de la API, permitiendo descubrir música nueva en cualquier momento.
+
+## 4. ¿Por qué las canciones duran 30 segundos?
 Esta es una **limitación de licencia** de la API de iTunes:
 - **Gratuidad**: Apple ofrece estos 30 segundos de forma gratuita y pública para que los desarrolladores puedan crear catálogos de música.
 - **Copyright**: Reproducir canciones completas (3-5 minutos) de artistas famosos de forma gratuita es ilegal y requiere licencias comerciales. 

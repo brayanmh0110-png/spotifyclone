@@ -395,7 +395,7 @@ fun HomeBottomBar(navController: NavHostController) {
     NavigationBar(containerColor = Color.Black.copy(alpha = 0.9f)) {
         val items = listOf(
             Triple("Inicio", Icons.Default.Home, Screen.Home.route),
-            Triple("Buscar", Icons.Default.Search, ""),
+            Triple("Buscar", Icons.Default.Search, Screen.Search.route),
             Triple("Biblioteca", Icons.Default.LibraryMusic, Screen.Library.route),
             Triple("Premium", Icons.Default.WorkspacePremium, ""),
             Triple("Crear", Icons.Default.AddCircle, "")
