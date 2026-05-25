@@ -121,10 +121,16 @@ class MusicViewModel : ViewModel() {
     }
 
     init {
+        // Primero cargamos lo que haya en Firestore para que la UI no esté vacía
         loadGenres()
         loadArtists()
         loadAlbums()
         loadSongs()
+        
+        // Luego, en segundo plano, verificamos y sembramos si es necesario
+        viewModelScope.launch {
+            seedData() 
+        }
     }
 
     private fun loadGenres() {
@@ -178,10 +184,13 @@ class MusicViewModel : ViewModel() {
         }
     }
 
-    fun seedData() {
-        viewModelScope.launch {
-            repository.seedClassicalMusic()
-        }
+    suspend fun seedData() {
+        repository.seedFullProjectData()
+        // Después de sembrar, cargamos los datos reales a la UI
+        loadGenres()
+        loadArtists()
+        loadAlbums()
+        loadSongs()
     }
 
     fun updatePlaylist(userId: String, playlist: Playlist) {

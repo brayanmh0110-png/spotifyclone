@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.R
 import coil.compose.AsyncImage
@@ -39,7 +40,7 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
     Scaffold(
         containerColor = Color.Black,
         topBar = { HomeTopBar(navController, selectedFilter) { selectedFilter = it } },
-        bottomBar = { HomeBottomBar() }
+        bottomBar = { HomeBottomBar(navController) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -62,20 +63,19 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
                         Spacer(Modifier.width(8.dp))
                         
                         if (albums.isNotEmpty()) {
-                            val album = albums[0]
+                            val album = albums.first()
                             HomeGridItem(
                                 album.title,
                                 album.coverUrl,
                                 Modifier.weight(1f),
-                                onClick = { navController.navigate(Screen.AlbumDetail.route) }
+                                onClick = { 
+                                    musicViewModel.loadSongsByAlbum(album.songIds)
+                                    navController.navigate(Screen.AlbumDetail.route) 
+                                }
                             )
                         } else {
-                            HomeGridItem(
-                                "Dios de Generaciones",
-                                R.drawable.album_generaciones,
-                                Modifier.weight(1f),
-                                onClick = { navController.navigate(Screen.AlbumDetail.route) }
-                            )
+                            // Placeholder mientras carga
+                            Box(Modifier.weight(1f).height(56.dp).background(Color(0xFF333333)))
                         }
                     }
                 }
@@ -133,7 +133,7 @@ fun SongItem(song: com.example.spotifyclone.model.Song, onClick: () -> Unit) {
             .clickable { onClick() }
     ) {
         AsyncImage(
-            model = if (song.coverUrl.isNotEmpty()) song.coverUrl else R.drawable.album_generaciones,
+            model = song.coverUrl,
             contentDescription = song.title,
             modifier = Modifier
                 .size(140.dp)
@@ -391,19 +391,27 @@ fun ArtistItem(name: String, imageRes: Int) {
 }
 
 @Composable
-fun HomeBottomBar() {
+fun HomeBottomBar(navController: NavHostController) {
     NavigationBar(containerColor = Color.Black.copy(alpha = 0.9f)) {
         val items = listOf(
-            Triple("Inicio", Icons.Default.Home, true),
-            Triple("Buscar", Icons.Default.Search, false),
-            Triple("Biblioteca", Icons.Default.LibraryMusic, false),
-            Triple("Premium", Icons.Default.WorkspacePremium, false),
-            Triple("Crear", Icons.Default.AddCircle, false)
+            Triple("Inicio", Icons.Default.Home, Screen.Home.route),
+            Triple("Buscar", Icons.Default.Search, ""),
+            Triple("Biblioteca", Icons.Default.LibraryMusic, Screen.Library.route),
+            Triple("Premium", Icons.Default.WorkspacePremium, ""),
+            Triple("Crear", Icons.Default.AddCircle, "")
         )
-        items.forEach { (label, icon, isSelected) ->
+        
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val currentRoute = navBackStackEntry?.destination?.route
+
+        items.forEach { (label, icon, route) ->
             NavigationBarItem(
-                selected = isSelected,
-                onClick = {},
+                selected = currentRoute == route,
+                onClick = {
+                    if (route.isNotEmpty() && currentRoute != route) {
+                        navController.navigate(route)
+                    }
+                },
                 icon = { Icon(icon, contentDescription = label) },
                 label = { Text(label, fontSize = 10.sp) },
                 colors = NavigationBarItemDefaults.colors(
