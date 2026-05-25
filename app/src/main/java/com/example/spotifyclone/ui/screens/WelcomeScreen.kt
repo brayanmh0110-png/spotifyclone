@@ -21,6 +21,10 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.example.spotifyclone.navigation.Screen
 
+/**
+ * Pantalla de bienvenida.
+ * Punto de inicio para usuarios no autenticados.
+ */
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
     Column(

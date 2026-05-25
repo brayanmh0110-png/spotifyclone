@@ -26,6 +26,10 @@ import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.MusicViewModel
 import com.example.spotifyclone.model.Song
 
+/**
+ * Pantalla de la biblioteca del usuario.
+ * Muestra la colección total de canciones (las 50 cargadas de Firestore).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(

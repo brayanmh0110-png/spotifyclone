@@ -24,21 +24,27 @@ import com.example.spotifyclone.ui.theme.SpotifycloneTheme
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
+/**
+ * Actividad principal de la aplicación.
+ * Actúa como el punto de entrada y gestiona la estructura base de la UI.
+ */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        enableEdgeToEdge() // Habilita el diseño de borde a borde (detrás de las barras del sistema)
         setContent {
             SpotifycloneTheme {
+                // Controladores de navegación y ViewModels compartidos
                 val navController = rememberNavController()
                 val authViewModel: AuthViewModel = viewModel()
                 val musicViewModel: MusicViewModel = viewModel()
 
+                // Observadores de estado global
                 val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                // Pantallas donde NO se debe mostrar el mini reproductor
+                // Configuración de pantallas que no muestran controles de música (Auth Flow)
                 val noPlayerScreens = listOf(
                     Screen.Welcome.route,
                     Screen.Register.route,
@@ -46,14 +52,13 @@ class MainActivity : ComponentActivity() {
                     Screen.LoginEmail.route
                 )
 
-                // Manejo de la navegación según el estado de la sesión
+                // Efecto para redirigir según el estado de la sesión de Firebase
                 LaunchedEffect(isLoggedIn) {
                     if (isLoggedIn == true) {
                         navController.navigate(Screen.Home.route) {
                             popUpTo(0) { inclusive = true }
                         }
                     } else if (isLoggedIn == false) {
-                        // Si cerramos sesión y no estamos en una pantalla de auth, volvemos a Welcome
                         if (currentRoute !in noPlayerScreens) {
                             navController.navigate(Screen.Welcome.route) {
                                 popUpTo(0) { inclusive = true }
@@ -64,13 +69,14 @@ class MainActivity : ComponentActivity() {
 
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                        // El Grafo de navegación principal
                         SpotifyNavHost(
                             navController = navController,
                             authViewModel = authViewModel,
                             musicViewModel = musicViewModel
                         )
                         
-                        // Si la ruta actual no está en la lista negra, mostramos el mini-player
+                        // Mini-reproductor global (visible si hay una canción y no es pantalla de auth)
                         if (currentRoute !in noPlayerScreens && currentRoute != Screen.Player.route) {
                             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                                 MiniPlayer(

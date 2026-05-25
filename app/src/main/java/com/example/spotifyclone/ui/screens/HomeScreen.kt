@@ -30,6 +30,10 @@ import com.example.spotifyclone.R
 import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
+/**
+ * Pantalla principal de la aplicación.
+ * Muestra recomendaciones, mixes, artistas y acceso a favoritos.
+ */
 @Composable
 fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel) {
     var selectedFilter by remember { mutableStateOf("Todas") }
@@ -50,7 +54,7 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
         ) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
-            // Grid de Tarjetas (Sección superior)
+            // Grid de accesos directos (Tus me gustas y el primer álbum)
             item {
                 Column {
                     Row(Modifier.fillMaxWidth()) {
@@ -74,14 +78,13 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
                                 }
                             )
                         } else {
-                            // Placeholder mientras carga
                             Box(Modifier.weight(1f).height(56.dp).background(Color(0xFF333333)))
                         }
                     }
                 }
             }
 
-            // SECCIÓN: Recomendado para ti (Firestore)
+            // SECCIÓN: Fila horizontal de canciones recomendadas cargadas de Firestore
             if (songs.isNotEmpty()) {
                 item {
                     SectionTitle("Recomendado para ti")

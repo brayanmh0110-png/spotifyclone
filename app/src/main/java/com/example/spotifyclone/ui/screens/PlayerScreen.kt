@@ -24,6 +24,10 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import androidx.compose.foundation.clickable
 
+/**
+ * Pantalla completa del reproductor.
+ * Muestra el arte del álbum en grande y todos los controles de la pista actual.
+ */
 @Composable
 fun PlayerScreen(
     navController: NavHostController,
@@ -143,7 +147,7 @@ fun PlayerScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Controls
+        // Panel de Controles: Shuffle, Anterior, Play/Pause, Siguiente, Repeat
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly,

@@ -31,6 +31,10 @@ import com.example.spotifyclone.model.Album
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
+/**
+ * Pantalla de detalle de un álbum.
+ * Muestra la información del álbum y la lista de canciones que lo componen.
+ */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun AlbumDetailScreen(navController: NavHostController, musicViewModel: MusicViewModel) {

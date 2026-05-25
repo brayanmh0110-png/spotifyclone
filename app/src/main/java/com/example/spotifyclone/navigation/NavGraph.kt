@@ -13,6 +13,10 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 
  // Definición de las rutas de la aplicación (Sealed Class)
 // Esto asegura que solo existan rutas predefinidas y evita errores de escritura.
+/**
+ * Definición de todas las rutas de navegación de la aplicación.
+ * El uso de una Sealed Class garantiza seguridad de tipos y evita errores de texto.
+ */
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
     data object Register : Screen("register")
@@ -27,6 +31,10 @@ sealed class Screen(val route: String) {
     data object Search : Screen("search")
 }
 
+/**
+ * Grafo de navegación central.
+ * Aquí se definen todas las pantallas (Composables) y sus transiciones.
+ */
 @Composable
 fun SpotifyNavHost(
     navController: NavHostController,
@@ -34,13 +42,12 @@ fun SpotifyNavHost(
     musicViewModel: MusicViewModel,
     modifier: Modifier = Modifier,
 ) {
-    // NavHost: El contenedor principal que gestiona qué pantalla se muestra según la ruta actual.
     NavHost(
         navController = navController,
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
-        // Cada 'composable' registra una pantalla en el grafo de navegación.
+        // Pantallas de Bienvenida y Autenticación
         composable(Screen.Welcome.route) {
             WelcomeScreen(navController = navController)
         }
@@ -48,7 +55,6 @@ fun SpotifyNavHost(
         composable(
             route = Screen.Register.route,
             enterTransition = {
-                // Animación de entrada: la pantalla se desliza desde la derecha.
                 slideIntoContainer(
                     towards = AnimatedContentTransitionScope.SlideDirection.Right,
                     animationSpec = tween(500)
@@ -74,6 +80,7 @@ fun SpotifyNavHost(
             LoginEmailScreen(navController = navController, authViewModel = authViewModel)
         }
         
+        // Pantallas principales de la aplicación (Post-Login)
         composable(Screen.Home.route) {
             HomeScreen(navController = navController, musicViewModel = musicViewModel)
         }
@@ -98,6 +105,7 @@ fun SpotifyNavHost(
             SearchScreen(navController = navController, musicViewModel = musicViewModel)
         }
 
+        // Pantalla del Reproductor con animación de subida (estilo Spotify)
         composable(
             route = Screen.Player.route,
             enterTransition = {

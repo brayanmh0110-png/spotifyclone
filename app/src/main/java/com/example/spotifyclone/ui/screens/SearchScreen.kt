@@ -24,6 +24,10 @@ import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.MusicViewModel
 import com.example.spotifyclone.model.Song
 
+/**
+ * Pantalla de búsqueda global.
+ * Permite buscar canciones en tiempo real a través de la API de iTunes.
+ */
 @Composable
 fun SearchScreen(
     navController: NavHostController,
