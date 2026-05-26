@@ -75,9 +75,11 @@ fun LikedSongsScreen(
             
             // Listado de canciones favoritas
             items(listaFavoritos) { cancion ->
-                ItemCancionFavorita(cancion) {
-                    vistaModeloMusica.playSong(cancion, listaFavoritos)
-                }
+                ItemCancionFavorita(
+                    cancion = cancion,
+                    alPulsar = { vistaModeloMusica.playSong(cancion, listaFavoritos) },
+                    alQuitar = { vistaModeloMusica.toggleFavorite(estadoUsuario.uid, cancion.id) }
+                )
             }
             
             item { Spacer(modifier = Modifier.height(100.dp)) }
@@ -109,7 +111,7 @@ fun CabeceraFavoritos(cantidad: Int) {
 }
 
 @Composable
-fun ItemCancionFavorita(cancion: MusicSong, alPulsar: () -> Unit) {
+fun ItemCancionFavorita(cancion: MusicSong, alPulsar: () -> Unit, alQuitar: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable { alPulsar() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -124,6 +126,14 @@ fun ItemCancionFavorita(cancion: MusicSong, alPulsar: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             Text(cancion.artist, color = Color.Gray, fontSize = 14.sp)
+        }
+        // Botón para quitar de favoritos (Corazón Verde)
+        IconButton(onClick = { alQuitar() }) {
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Quitar de favoritos",
+                tint = Color(0xFF1DB954)
+            )
         }
         Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
     }

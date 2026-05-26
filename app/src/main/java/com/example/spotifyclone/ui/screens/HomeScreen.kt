@@ -223,6 +223,7 @@ fun BarraSuperiorInicio(
                     BotonFiltro(texto = "Podcasts", estaActivo = filtroActivo == "Podcasts") { alCambiarFiltro("Podcasts") }
                     if (filtroActivo == "Podcasts") BotonFiltro(texto = "Siguiendo", estaActivo = false) {}
                 }
+
             }
         }
     }
