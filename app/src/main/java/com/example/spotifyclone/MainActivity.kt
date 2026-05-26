@@ -2,88 +2,166 @@ package com.example.spotifyclone
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.navigation.SpotifyNavHost
+import com.example.spotifyclone.ui.components.CreateOptionItem
 import com.example.spotifyclone.ui.components.MiniPlayer
+import com.example.spotifyclone.ui.components.SpotifyBottomBar
 import com.example.spotifyclone.ui.theme.SpotifycloneTheme
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
- * Actividad principal de la aplicación.
- * Actúa como el punto de entrada y gestiona la estructura base de la UI.
+ * MainActivity: Es el corazón de la aplicación.
+ * Aquí se configura el diseño base, la navegación y los elementos globales.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge() // Habilita el diseño de borde a borde (detrás de las barras del sistema)
+        
+        // Configura la app para que ocupe toda la pantalla y fuerza iconos blancos en la barra de estado (Hora/Batería)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
+
         setContent {
             SpotifycloneTheme {
-                // Controladores de navegación y ViewModels compartidos
-                val navController = rememberNavController()
-                val authViewModel: AuthViewModel = viewModel()
-                val musicViewModel: MusicViewModel = viewModel()
+                // Herramientas esenciales para que la app funcione:
+                val controladorNavegacion = rememberNavController() // Gestiona el cambio entre pantallas
+                val vistaModeloAutenticacion: AuthViewModel = viewModel() // Maneja el login y usuario
+                val vistaModeloMusica: MusicViewModel = viewModel() // Maneja canciones y reproducción
 
-                // Observadores de estado global
-                val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
+                // Estados que observamos en tiempo real:
+                val estaLogueado by vistaModeloAutenticacion.isLoggedIn.collectAsState()
+                val rutaActual by controladorNavegacion.currentBackStackEntryAsState()
+                val nombreRuta = rutaActual?.destination?.route
 
-                // Configuración de pantallas que no muestran controles de música (Auth Flow)
-                val noPlayerScreens = listOf(
+                // Estado para mostrar u ocultar el menú de "Crear" (+)
+                var mostrarMenuCrear by remember { mutableStateOf(false) }
+
+                // Lista de pantallas donde NO queremos mostrar controles de música (flujo de login)
+                val pantallasSinReproductor = listOf(
                     Screen.Welcome.route,
                     Screen.Register.route,
                     Screen.LoginOptions.route,
                     Screen.LoginEmail.route
                 )
 
-                // Efecto para redirigir según el estado de la sesión de Firebase
-                LaunchedEffect(isLoggedIn) {
-                    if (isLoggedIn == true) {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(0) { inclusive = true }
+                // Lógica de redirección automática: si cambia el estado del login, movemos al usuario
+                LaunchedEffect(estaLogueado) {
+                    if (estaLogueado == true) {
+                        controladorNavegacion.navigate(Screen.Home.route) {
+                            popUpTo(0) { inclusive = true } // Limpia el historial para no volver atrás
                         }
-                    } else if (isLoggedIn == false) {
-                        if (currentRoute !in noPlayerScreens) {
-                            navController.navigate(Screen.Welcome.route) {
+                    } else if (estaLogueado == false) {
+                        // AQUÍ: Detenemos la música si el usuario cierra sesión
+                        vistaModeloMusica.stopMusic()
+                        
+                        if (nombreRuta !in pantallasSinReproductor) {
+                            controladorNavegacion.navigate(Screen.Welcome.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
                     }
                 }
 
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-                        // El Grafo de navegación principal
-                        SpotifyNavHost(
-                            navController = navController,
-                            authViewModel = authViewModel,
-                            musicViewModel = musicViewModel
-                        )
-                        
-                        // Mini-reproductor global (visible si hay una canción y no es pantalla de auth)
-                        if (currentRoute !in noPlayerScreens && currentRoute != Screen.Player.route) {
-                            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
-                                MiniPlayer(
-                                    musicViewModel = musicViewModel,
-                                    navController = navController
-                                )
+                // Estructura visual principal
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
+                        containerColor = Color.Black, // FONTO NEGRO PARA EVITAR BORDES BLANCOS
+                        // Barra inferior persistente (Bottom Bar)
+                        bottomBar = {
+                            // Solo se muestra si el usuario ya entró a la app principal
+                            val mostrarBarrasGlobales = nombreRuta !in pantallasSinReproductor && 
+                                                        nombreRuta != Screen.Player.route && 
+                                                        nombreRuta != null
+                            
+                            if (mostrarBarrasGlobales) {
+                                Column(modifier = Modifier.background(Color.Black)) {
+                                    // Mini-reproductor que flota sobre el menú
+                                    MiniPlayer(
+                                        musicViewModel = vistaModeloMusica,
+                                        navController = controladorNavegacion
+                                    )
+                                    // El menú de 5 botones (Inicio, Buscar, etc.)
+                                    SpotifyBottomBar(
+                                        navController = controladorNavegacion,
+                                        onCreateClick = { mostrarMenuCrear = true }
+                                    )
+                                }
                             }
+                        }
+                    ) { espaciosInternos ->
+                        // Contenedor de las pantallas (Home, Buscar, Biblioteca, etc.)
+                        Box(modifier = Modifier.fillMaxSize().padding(espaciosInternos)) {
+                            SpotifyNavHost(
+                                navController = controladorNavegacion,
+                                authViewModel = vistaModeloAutenticacion,
+                                musicViewModel = vistaModeloMusica
+                            )
+                        }
+                    }
+
+                    // CAPA DE SUPERPOSICIÓN: Menú de "Crear" (Solo aparece al pulsar el +)
+                    if (mostrarMenuCrear) {
+                        // 1. Fondo oscuro que bloquea el resto de la app
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.7f))
+                                .clickable { mostrarMenuCrear = false } // Cerrar al tocar fuera
+                        )
+
+                        // 2. Tarjeta con opciones de creación (Playlist, Fusión, etc.)
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 110.dp, start = 12.dp, end = 12.dp)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color(0xFF282828))
+                                .padding(20.dp)
+                                .clickable(enabled = false) { } // Evita que el clic pase al fondo
+                        ) {
+                            CreateOptionItem(Icons.Default.MusicNote, "Playlist", "Crea una playlist con canciones o episodios")
+                            CreateOptionItem(Icons.Default.People, "Playlist colaborativa", "Crea una playlist con tus personas favoritas")
+                            CreateOptionItem(Icons.Default.AllInclusive, "Fusión", "Combina los gustos de tus personas favoritas en una playlist")
+                        }
+
+                        // 3. Botón circular "X" para cerrar el menú
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(bottom = 16.dp, end = 16.dp)
+                                .size(64.dp)
+                                .clip(CircleShape)
+                                .background(Color.LightGray)
+                                .clickable { mostrarMenuCrear = false },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Black, modifier = Modifier.size(32.dp))
                         }
                     }
                 }

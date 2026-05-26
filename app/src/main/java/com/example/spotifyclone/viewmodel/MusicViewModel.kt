@@ -178,6 +178,26 @@ class MusicViewModel : ViewModel() {
     }
 
     /**
+     * Detiene completamente la reproducción y limpia el estado del reproductor.
+     * Útil para cuando el usuario cierra sesión.
+     */
+    fun stopMusic() {
+        try {
+            mediaPlayer?.let {
+                if (it.isPlaying) it.stop()
+                it.release()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        } finally {
+            mediaPlayer = null
+            _currentSong.value = null
+            _isPlaying.value = false
+            _currentPosition.value = 0f
+        }
+    }
+
+    /**
      * Limpieza del reproductor cuando el ViewModel se destruye.
      */
     override fun onCleared() {

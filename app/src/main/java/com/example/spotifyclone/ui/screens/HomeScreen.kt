@@ -21,105 +21,140 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.R
 import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.MusicViewModel
+import com.example.spotifyclone.viewmodel.AuthViewModel
+import com.example.spotifyclone.ui.components.SpotifyBottomBar
 
 /**
- * Pantalla principal de la aplicación.
- * Muestra recomendaciones, mixes, artistas y acceso a favoritos.
+ * HomeScreen: Pantalla principal de la aplicación.
+ * Organiza el contenido en tres filtros: Todas, Música y Podcasts.
  */
 @Composable
-fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel) {
-    var selectedFilter by remember { mutableStateOf("Todas") }
-    val artists by musicViewModel.artists.collectAsState()
-    val albums by musicViewModel.albums.collectAsState()
-    val songs by musicViewModel.songs.collectAsState()
+fun HomeScreen(
+    controladorNavegacion: NavHostController,
+    vistaModeloMusica: MusicViewModel,
+    vistaModeloAutenticacion: AuthViewModel
+) {
+    // 1. Cargamos los datos necesarios desde los ViewModels
+    var filtroSeleccionado by remember { mutableStateOf("Todas") }
+    val listaArtistas by vistaModeloMusica.artists.collectAsState()
+    val listaAlbumes by vistaModeloMusica.albums.collectAsState()
+    val listaCanciones by vistaModeloMusica.songs.collectAsState()
+    val datosUsuario by vistaModeloAutenticacion.userState.collectAsState()
 
     Scaffold(
         containerColor = Color.Black,
-        topBar = { HomeTopBar(navController, selectedFilter) { selectedFilter = it } },
-        bottomBar = { HomeBottomBar(navController) }
-    ) { padding ->
+        // Barra superior con foto de perfil y filtros
+        topBar = { 
+            BarraSuperiorInicio(
+                navController = controladorNavegacion,
+                filtroActivo = filtroSeleccionado,
+                urlFotoPerfil = datosUsuario.photoUrl,
+                alCambiarFiltro = { filtroSeleccionado = it }
+            ) 
+        }
+    ) { rellenos ->
+        // Lista principal con scroll vertical
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(rellenos)
                 .padding(horizontal = 16.dp)
         ) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
-            // Grid de accesos directos (Tus me gustas y el primer álbum)
-            item {
-                Column {
-                    Row(Modifier.fillMaxWidth()) {
-                        HomeGridItem(
-                            "Tus me gustas",
-                            R.drawable.corazon,
-                            Modifier.weight(1f),
-                            onClick = { navController.navigate(Screen.LikedSongs.route) }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        
-                        if (albums.isNotEmpty()) {
-                            val album = albums.first()
-                            HomeGridItem(
-                                album.title,
-                                album.coverUrl,
-                                Modifier.weight(1f),
-                                onClick = { 
-                                    musicViewModel.loadSongsByAlbum(album.songIds)
-                                    navController.navigate(Screen.AlbumDetail.route) 
-                                }
+            // Lógica para mostrar contenido según el filtro elegido
+            when (filtroSeleccionado) {
+                "Todas" -> {
+                    // SECCIÓN: Accesos directos (Me gustas y primer álbum)
+                    item {
+                        Row(Modifier.fillMaxWidth()) {
+                            ItemGridAccesoRapido(
+                                titulo = "Tus me gustas",
+                                recursoImagen = R.drawable.corazon,
+                                modifier = Modifier.weight(1f),
+                                alPulsar = { controladorNavegacion.navigate(Screen.LikedSongs.route) }
                             )
-                        } else {
-                            Box(Modifier.weight(1f).height(56.dp).background(Color(0xFF333333)))
+                            Spacer(Modifier.width(8.dp))
+                            
+                            if (listaAlbumes.isNotEmpty()) {
+                                val primerAlbum = listaAlbumes.first()
+                                ItemGridAccesoRapido(
+                                    titulo = primerAlbum.title,
+                                    urlImagen = primerAlbum.coverUrl,
+                                    modifier = Modifier.weight(1f),
+                                    alPulsar = { 
+                                        vistaModeloMusica.loadSongsByAlbum(primerAlbum.songIds)
+                                        controladorNavegacion.navigate(Screen.AlbumDetail.route) 
+                                    }
+                                )
+                            }
                         }
                     }
-                }
-            }
 
-            // SECCIÓN: Fila horizontal de canciones recomendadas cargadas de Firestore
-            if (songs.isNotEmpty()) {
-                item {
-                    SectionTitle("Recomendado para ti")
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        items(songs) { song ->
-                            SongItem(song = song) {
-                                musicViewModel.playSong(song, songs)
+                    // SECCIÓN: Canciones recomendadas (Horizontal)
+                    if (listaCanciones.isNotEmpty()) {
+                        item {
+                            TituloSeccion("Recomendado para ti")
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(listaCanciones) { cancion ->
+                                    TarjetaCancionHorizontal(cancion = cancion) {
+                                        vistaModeloMusica.playSong(cancion, listaCanciones)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECCIÓN: Mixes (Horizontal)
+                    item {
+                        TituloSeccion("Tus mixes")
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(listaAlbumes) { album ->
+                                TarjetaMixHorizontal(
+                                    nombre = album.title, 
+                                    urlImagen = album.coverUrl,
+                                    alPulsar = {
+                                        vistaModeloMusica.loadSongsByAlbum(album.songIds)
+                                        controladorNavegacion.navigate(Screen.AlbumDetail.route)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    // SECCIÓN: Artistas (Iconos circulares)
+                    item {
+                        TituloSeccion("Tus artistas favoritos")
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            items(listaArtistas) { artista ->
+                                ItemArtistaCircular(artista.name, artista.imageUrl)
                             }
                         }
                     }
                 }
-            }
 
-            item {
-                SectionTitle("Tus mixes")
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(albums) { album ->
-                        MixItem(
-                            name = album.title, 
-                            imageUrl = album.coverUrl,
-                            onClick = {
-                                musicViewModel.loadSongsByAlbum(album.songIds)
-                                navController.navigate(Screen.AlbumDetail.route)
-                            }
-                        )
+                "Música" -> {
+                    item { TituloSeccion("Últimos lanzamientos") }
+                    // Mostramos tarjetas detalladas para la sección de música
+                    items(listaCanciones.take(5)) { cancion ->
+                        TarjetaLanzamientoDetallada(cancion) {
+                            vistaModeloMusica.playSong(cancion, listaCanciones)
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
-            
-            item {
-                SectionTitle("Tus artistas favoritos")
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(artists) { artist ->
-                        ArtistItem(artist.name, artist.imageUrl)
-                    }
+
+                "Podcasts" -> {
+                    item { TituloSeccion("Episodios más recientes") }
+                    item { VistaPodcastsVacia() }
                 }
             }
             
@@ -128,170 +163,12 @@ fun HomeScreen(navController: NavHostController, musicViewModel: MusicViewModel)
     }
 }
 
-@Composable
-fun SongItem(song: com.example.spotifyclone.model.Song, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .width(140.dp)
-            .clickable { onClick() }
-    ) {
-        AsyncImage(
-            model = song.coverUrl,
-            contentDescription = song.title,
-            modifier = Modifier
-                .size(140.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = song.title,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-        )
-        Text(
-            text = song.artist,
-            color = Color.Gray,
-            fontSize = 12.sp,
-            maxLines = 1
-        )
-    }
-}
+// --- COMPONENTES INTERNOS (UI ATOMS) ---
 
 @Composable
-fun HomeTopBar(
-    navController: NavHostController,
-    selectedFilter: String,
-    onFilterClick: (String) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.Black)
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(35.dp)
-                    .clip(CircleShape)
-                    .background(Color.Gray)
-                    .clickable{
-                        navController.navigate(Screen.Panelusu.route)
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.perfil),
-                    contentDescription = "Perfil",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip("Todas", selectedFilter == "Todas") { onFilterClick("Todas") }
-                FilterChip("Música", selectedFilter == "Música") { onFilterClick("Música") }
-                FilterChip("Podcasts", selectedFilter == "Podcasts") { onFilterClick("Podcasts") }
-                if (selectedFilter == "Música") {
-                    FilterChip("Siguiendo", false) {}
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    Surface(
-        modifier = Modifier.clickable { onClick() },
-        shape = CircleShape,
-        color = if (isSelected) Color(0xFF1DB954) else Color(0xFF333333)
-    ) {
-        Text(
-            text = text,
-            color = if (isSelected) Color.Black else Color.White,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun HomeGridItem(title: String, icon: ImageVector, modifier: Modifier, onClick: () -> Unit = {}) {
-    HomeGridItemContent(title, modifier, onClick) {
-        Icon(icon, contentDescription = null, tint = Color.White)
-    }
-}
-
-@Composable
-fun HomeGridItem(title: String, imageUrl: String, modifier: Modifier, onClick: () -> Unit = {}) {
-    HomeGridItemContent(title, modifier, onClick) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-@Composable
-fun HomeGridItem(title: String, imageRes: Int, modifier: Modifier, onClick: () -> Unit = {}) {
-    HomeGridItemContent(title, modifier, onClick) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
-}
-
-@Composable
-private fun HomeGridItemContent(
-    title: String,
-    modifier: Modifier,
-    onClick: () -> Unit,
-    content: @Composable BoxScope.() -> Unit
-) {
-    Surface(
-        modifier = modifier
-            .height(56.dp)
-            .clickable { onClick() },
-        color = Color(0xFF333333),
-        shape = RoundedCornerShape(4.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(56.dp)
-                    .background(Color.Gray),
-                contentAlignment = Alignment.Center
-            ) {
-                content()
-            }
-            Text(
-                text = title,
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(horizontal = 8.dp),
-                maxLines = 2
-            )
-        }
-    }
-}
-
-@Composable
-fun SectionTitle(title: String) {
+fun TituloSeccion(texto: String) {
     Text(
-        text = title,
+        text = texto,
         color = Color.White,
         fontSize = 22.sp,
         fontWeight = FontWeight.Bold,
@@ -300,131 +177,184 @@ fun SectionTitle(title: String) {
 }
 
 @Composable
-fun MixItem(name: String, imageUrl: String, onClick: () -> Unit = {}) {
+fun BarraSuperiorInicio(
+    navController: NavHostController,
+    filtroActivo: String,
+    urlFotoPerfil: String,
+    alCambiarFiltro: (String) -> Unit
+) {
     Column(
         modifier = Modifier
-            .width(150.dp)
-            .clickable { onClick() }
+            .fillMaxWidth()
+            .background(Color.Black)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = null,
-            modifier = Modifier
-                .size(150.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Mix de $name",
-            color = Color.LightGray,
-            fontSize = 12.sp
-        )
-    }
-}
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Icono de perfil dinámico
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.DarkGray)
+                    .clickable { navController.navigate(Screen.Panelusu.route) },
+                contentAlignment = Alignment.Center
+            ) {
+                if (urlFotoPerfil.isNotEmpty()) {
+                    AsyncImage(model = urlFotoPerfil, contentDescription = "Perfil", contentScale = ContentScale.Crop)
+                } else {
+                    Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            // Fila de Filtros (Chips)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                BotonFiltro(texto = "Todas", estaActivo = filtroActivo == "Todas") { alCambiarFiltro("Todas") }
+                
+                // Grupo Música
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    BotonFiltro(texto = "Música", estaActivo = filtroActivo == "Música") { alCambiarFiltro("Música") }
+                    if (filtroActivo == "Música") BotonFiltro(texto = "Siguiendo", estaActivo = false) {}
+                }
 
-@Composable
-fun MixItem(name: String, imageRes: Int) {
-    Column(modifier = Modifier.width(150.dp)) {
-        Image(
-            painter = painterResource(id = imageRes),
-            contentDescription = null,
-            modifier = Modifier
-                .size(150.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "Mix de $name",
-            color = Color.LightGray,
-            fontSize = 12.sp
-        )
-    }
-}
-
-@Composable
-fun ArtistItem(name: String, imageUrl: String) {
-    Column(
-        modifier = Modifier.width(120.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(Color.Gray),
-            contentAlignment = Alignment.Center
-        ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
+                // Grupo Podcasts
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    BotonFiltro(texto = "Podcasts", estaActivo = filtroActivo == "Podcasts") { alCambiarFiltro("Podcasts") }
+                    if (filtroActivo == "Podcasts") BotonFiltro(texto = "Siguiendo", estaActivo = false) {}
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = name, color = Color.White, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
 @Composable
-fun ArtistItem(name: String, imageRes: Int) {
-    Column(
-        modifier = Modifier.width(120.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+fun BotonFiltro(texto: String, estaActivo: Boolean, alPulsar: () -> Unit) {
+    Surface(
+        modifier = Modifier.clickable { alPulsar() },
+        shape = CircleShape,
+        color = if (estaActivo) Color(0xFF1DB954) else Color(0xFF333333)
     ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(Color.Gray),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = name,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = name, color = Color.White, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(
+            text = texto,
+            color = if (estaActivo) Color.Black else Color.White,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium
+        )
     }
 }
 
 @Composable
-fun HomeBottomBar(navController: NavHostController) {
-    NavigationBar(containerColor = Color.Black.copy(alpha = 0.9f)) {
-        val items = listOf(
-            Triple("Inicio", Icons.Default.Home, Screen.Home.route),
-            Triple("Buscar", Icons.Default.Search, Screen.Search.route),
-            Triple("Biblioteca", Icons.Default.LibraryMusic, Screen.Library.route),
-            Triple("Premium", Icons.Default.WorkspacePremium, ""),
-            Triple("Crear", Icons.Default.AddCircle, "")
-        )
-        
-        val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
-
-        items.forEach { (label, icon, route) ->
-            NavigationBarItem(
-                selected = currentRoute == route,
-                onClick = {
-                    if (route.isNotEmpty() && currentRoute != route) {
-                        navController.navigate(route)
-                    }
-                },
-                icon = { Icon(icon, contentDescription = label) },
-                label = { Text(label, fontSize = 10.sp) },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color.White,
-                    unselectedIconColor = Color.Gray,
-                    selectedTextColor = Color.White,
-                    unselectedTextColor = Color.Gray,
-                    indicatorColor = Color.Transparent
+fun TarjetaLanzamientoDetallada(cancion: com.example.spotifyclone.model.Song, alPulsar: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { alPulsar() },
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AsyncImage(
+                    model = cancion.coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp).clip(RoundedCornerShape(4.dp)),
+                    contentScale = ContentScale.Crop
                 )
-            )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(cancion.artist, color = Color.Gray, fontSize = 14.sp)
+                    Text("Sencillo • Reciente", color = Color.Gray, fontSize = 12.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Etiqueta de "Avance"
+                Surface(color = Color.DarkGray.copy(alpha = 0.5f), shape = CircleShape) {
+                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Shuffle, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Avance disponible", color = Color.White, fontSize = 11.sp)
+                    }
+                }
+                // Botones de acción
+                Row {
+                    Icon(Icons.Default.AddCircleOutline, null, tint = Color.White)
+                    Spacer(Modifier.width(16.dp))
+                    Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun TarjetaCancionHorizontal(cancion: com.example.spotifyclone.model.Song, alPulsar: () -> Unit) {
+    Column(modifier = Modifier.width(140.dp).clickable { alPulsar() }) {
+        AsyncImage(
+            model = cancion.coverUrl,
+            contentDescription = null,
+            modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(cancion.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(cancion.artist, color = Color.Gray, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+@Composable
+fun ItemGridAccesoRapido(
+    titulo: String, 
+    recursoImagen: Int? = null, 
+    urlImagen: String? = null, 
+    modifier: Modifier = Modifier, 
+    alPulsar: () -> Unit
+) {
+    Surface(
+        modifier = modifier.height(56.dp).clickable { alPulsar() },
+        color = Color(0xFF333333),
+        shape = RoundedCornerShape(4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (recursoImagen != null) {
+                Image(painterResource(recursoImagen), null, Modifier.size(56.dp), contentScale = ContentScale.Crop)
+            } else if (urlImagen != null) {
+                AsyncImage(urlImagen, null, Modifier.size(56.dp), contentScale = ContentScale.Crop)
+            }
+            Text(titulo, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp), maxLines = 2)
+        }
+    }
+}
+
+@Composable
+fun TarjetaMixHorizontal(nombre: String, urlImagen: String, alPulsar: () -> Unit) {
+    Column(modifier = Modifier.width(150.dp).clickable { alPulsar() }) {
+        AsyncImage(urlImagen, null, Modifier.size(150.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("Mix de $nombre", color = Color.LightGray, fontSize = 12.sp)
+    }
+}
+
+@Composable
+fun ItemArtistaCircular(nombre: String, urlImagen: String) {
+    Column(modifier = Modifier.width(120.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        AsyncImage(urlImagen, null, Modifier.size(120.dp).clip(CircleShape), contentScale = ContentScale.Crop)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(nombre, color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+fun VistaPodcastsVacia() {
+    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Default.Podcasts, null, tint = Color.Gray, modifier = Modifier.size(60.dp))
+        Spacer(Modifier.height(16.dp))
+        Text("Todavía no sigues ningún podcast", color = Color.White, fontWeight = FontWeight.Bold)
+        Text("Sigue tus programas favoritos para verlos aquí.", color = Color.Gray, fontSize = 13.sp)
     }
 }

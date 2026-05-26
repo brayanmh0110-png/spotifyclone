@@ -5,16 +5,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.compose.dialog
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.spotifyclone.ui.screens.*
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
- // Definición de las rutas de la aplicación (Sealed Class)
-// Esto asegura que solo existan rutas predefinidas y evita errores de escritura.
 /**
- * Definición de todas las rutas de navegación de la aplicación.
+ * Screen: Definición de las rutas de navegación de la aplicación.
  * El uso de una Sealed Class garantiza seguridad de tipos y evita errores de texto.
  */
 sealed class Screen(val route: String) {
@@ -32,8 +32,8 @@ sealed class Screen(val route: String) {
 }
 
 /**
- * Grafo de navegación central.
- * Aquí se definen todas las pantallas (Composables) y sus transiciones.
+ * SpotifyNavHost: El mapa de navegación de la aplicación.
+ * Define qué pantalla mostrar según la ruta activa y cómo transicionar entre ellas.
  */
 @Composable
 fun SpotifyNavHost(
@@ -47,81 +47,106 @@ fun SpotifyNavHost(
         startDestination = Screen.Welcome.route,
         modifier = modifier
     ) {
-        // Pantallas de Bienvenida y Autenticación
+        // --- FLUJO DE BIENVENIDA Y AUTENTICACIÓN ---
+        
         composable(Screen.Welcome.route) {
-            WelcomeScreen(navController = navController)
+            WelcomeScreen(controladorNavegacion = navController)
         }
         
         composable(
             route = Screen.Register.route,
             enterTransition = {
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                    animationSpec = tween(500)
-                )
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
             }
         ) {
-            RegisterScreen(navController = navController, authViewModel = authViewModel)
+            RegisterScreen(
+                controladorNavegacion = navController, 
+                vistaModeloAutenticacion = authViewModel
+            )
         }
         
         composable(
             route = Screen.LoginOptions.route,
             enterTransition = {
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                    animationSpec = tween(500)
-                )
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
             }
         ) {
             LoginOptionsScreen(navController = navController)
         }
         
         composable(Screen.LoginEmail.route) {
-            LoginEmailScreen(navController = navController, authViewModel = authViewModel)
+            LoginEmailScreen(
+                controladorNavegacion = navController, 
+                vistaModeloAutenticacion = authViewModel
+            )
         }
         
-        // Pantallas principales de la aplicación (Post-Login)
+        // --- PANTALLAS PRINCIPALES (POST-LOGIN) ---
+        
         composable(Screen.Home.route) {
-            HomeScreen(navController = navController, musicViewModel = musicViewModel)
+            HomeScreen(
+                controladorNavegacion = navController, 
+                vistaModeloMusica = musicViewModel, 
+                vistaModeloAutenticacion = authViewModel
+            )
         }
         
         composable(Screen.AlbumDetail.route) {
-            AlbumDetailScreen(navController = navController, musicViewModel = musicViewModel)
+            AlbumDetailScreen(
+                controladorNavegacion = navController, 
+                vistaModeloMusica = musicViewModel
+            )
         }
         
-        composable(Screen.Panelusu.route) {
-            PanelUsuScreen(navController = navController, authViewModel = authViewModel)
+        // Panel de usuario como diálogo (overlay)
+        dialog(
+            route = Screen.Panelusu.route,
+            dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            PanelUsuScreen(
+                controladorNavegacion = navController, 
+                vistaModeloAutenticacion = authViewModel
+            )
         }
         
         composable(Screen.LikedSongs.route) {
-            LikedSongsScreen(navController = navController, authViewModel = authViewModel, musicViewModel = musicViewModel)
+            LikedSongsScreen(
+                controladorNavegacion = navController, 
+                vistaModeloAutenticacion = authViewModel, 
+                vistaModeloMusica = musicViewModel
+            )
         }
 
         composable(Screen.Library.route) {
-            LibraryScreen(navController = navController, musicViewModel = musicViewModel)
+            LibraryScreen(
+                controladorNavegacion = navController, 
+                vistaModeloMusica = musicViewModel
+            )
         }
 
         composable(Screen.Search.route) {
-            SearchScreen(navController = navController, musicViewModel = musicViewModel)
+            SearchScreen(
+                controladorNavegacion = navController, 
+                vistaModeloMusica = musicViewModel
+            )
         }
 
-        // Pantalla del Reproductor con animación de subida (estilo Spotify)
+        // --- REPRODUCTOR A PANTALLA COMPLETA ---
+        
         composable(
             route = Screen.Player.route,
             enterTransition = {
-                slideIntoContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Up,
-                    animationSpec = tween(500)
-                )
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Up, animationSpec = tween(500))
             },
             exitTransition = {
-                slideOutOfContainer(
-                    towards = AnimatedContentTransitionScope.SlideDirection.Down,
-                    animationSpec = tween(500)
-                )
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Down, animationSpec = tween(500))
             }
         ) {
-            PlayerScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
+            PlayerScreen(
+                controladorNavegacion = navController, 
+                vistaModeloMusica = musicViewModel, 
+                vistaModeloAutenticacion = authViewModel
+            )
         }
     }
 }

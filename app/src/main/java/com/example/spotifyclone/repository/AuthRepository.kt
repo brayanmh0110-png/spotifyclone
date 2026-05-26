@@ -49,6 +49,15 @@ class AuthRepository {
             null
         }
     }
+
+    suspend fun updateProfilePicture(uid: String, photoUrl: String): Result<Unit> {
+        return try {
+            firestore.collection("users").document(uid).update("photoUrl", photoUrl).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
     
     fun getCurrentUserUid(): String? {
         return auth.currentUser?.uid

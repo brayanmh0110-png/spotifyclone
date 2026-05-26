@@ -1,235 +1,93 @@
 package com.example.spotifyclone.ui.screens
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.viewmodel.AuthViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * RegisterScreen: Pantalla para crear una nueva cuenta.
+ */
 @Composable
-fun RegisterScreen(navController: NavHostController, authViewModel: AuthViewModel) {
-    val userState by authViewModel.userState.collectAsState()
-    var showEmailFields by remember { mutableStateOf(false) }
-    var password by remember { mutableStateOf("") }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+fun RegisterScreen(
+    controladorNavegacion: NavHostController, 
+    vistaModeloAutenticacion: AuthViewModel
+) {
+    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    var contrasena by remember { mutableStateOf("") }
+    val errorServidor by vistaModeloAutenticacion.error.collectAsState()
 
     Scaffold(
+        containerColor = Color.Black,
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
-            )
-        },
-        containerColor = Color.Black
-    ) { padding ->
+            IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
+            }
+        }
+    ) { rellenos ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(rellenos)
+                .padding(24.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Text("Crea tu cuenta", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             
-            // Logo placeholder
-            Text("🎧", fontSize = 50.sp)
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Text(
-                text = "Regístrate para empezar a escuchar contenido",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
+            Spacer(Modifier.height(24.dp))
+
+            // Campo de Nombre
+            OutlinedTextField(
+                value = estadoUsuario.name,
+                onValueChange = { vistaModeloAutenticacion.onNameChange(it) },
+                label = { Text("¿Cómo te llamas?") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
             )
-            
-            Spacer(modifier = Modifier.height(32.dp))
 
-            val isLoggedIn by authViewModel.isLoggedIn.collectAsState()
-            val authError by authViewModel.error.collectAsState()
+            Spacer(Modifier.height(16.dp))
 
-            LaunchedEffect(isLoggedIn) {
-                if (isLoggedIn == true) {
-                    navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Welcome.route) { inclusive = true }
-                    }
-                }
-            }
-
-            LaunchedEffect(authError) {
-                authError?.let {
-                    errorMessage = it
-                    authViewModel.clearError()
-                }
-            }
-
-            if (!showEmailFields) {
-                SocialRegisterButtons(onEmailClick = { showEmailFields = true })
-            } else {
-                EmailRegistrationForm(
-                    email = userState.email,
-                    password = password,
-                    errorMessage = errorMessage,
-                    onEmailChange = { 
-                        authViewModel.onEmailChange(it)
-                        errorMessage = null 
-                    },
-                    onPasswordChange = { 
-                        password = it
-                        errorMessage = null
-                    },
-                    onRegisterClick = {
-                        if (userState.email.isBlank() || password.isBlank()) {
-                            errorMessage = "Faltan datos: correo y/o contraseña"
-                        } else {
-                            authViewModel.register(password)
-                        }
-                    }
-                )
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-            
-            Text(
-                text = "¿Ya tienes una cuenta?",
-                color = Color.White,
-                fontSize = 14.sp
+            // Campo de Email
+            OutlinedTextField(
+                value = estadoUsuario.email,
+                onValueChange = { vistaModeloAutenticacion.onEmailChange(it) },
+                label = { Text("Correo electrónico") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
             )
-            TextButton(onClick = { navController.navigate(Screen.LoginOptions.route) }) {
-                Text(
-                    text = "Iniciar sesión",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-    }
-}
 
-@Composable
-fun SocialRegisterButtons(onEmailClick: () -> Unit) {
-    Column {
-        RegisterButton(
-            text = "Continuar con tu email",
-            containerColor = Color(0xFF1DB954),
-            contentColor = Color.Black,
-            onClick = onEmailClick
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        RegisterButton(text = "Continuar con número de teléfono", border = BorderStroke(1.dp, Color.White))
-        Spacer(modifier = Modifier.height(12.dp))
-        RegisterButton(text = "Continuar con Google", border = BorderStroke(1.dp, Color.White))
-        Spacer(modifier = Modifier.height(12.dp))
-        RegisterButton(text = "Continuar con Apple", border = BorderStroke(1.dp, Color.White))
-    }
-}
+            Spacer(Modifier.height(16.dp))
 
-@Composable
-fun EmailRegistrationForm(
-    email: String,
-    password: String,
-    errorMessage: String?,
-    onEmailChange: (String) -> Unit,
-    onPasswordChange: (String) -> Unit,
-    onRegisterClick: () -> Unit
-) {
-    Column {
-        OutlinedTextField(
-            value = email,
-            onValueChange = onEmailChange,
-            label = { Text("Email", color = Color.Gray) },
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.Gray
-            ),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = onPasswordChange,
-            label = { Text("Contraseña", color = Color.Gray) },
-            modifier = Modifier.fillMaxWidth(),
-            visualTransformation = PasswordVisualTransformation(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White,
-                focusedBorderColor = Color.White,
-                unfocusedBorderColor = Color.Gray
-            ),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
-        )
-        
-        if (errorMessage != null) {
-            Text(
-                text = errorMessage,
-                color = Color.Red,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(top = 8.dp)
+            // Campo de Contraseña
+            OutlinedTextField(
+                value = contrasena,
+                onValueChange = { contrasena = it },
+                label = { Text("Contraseña (min. 6 caracteres)") },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
             )
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = onRegisterClick,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954)),//
-            shape = CircleShape
-        ) {
-            Text("Registrarse", color = Color.Black, fontWeight = FontWeight.Bold)
-        }
-    }
-}
+            if (errorServidor != null) {
+                Text(text = errorServidor!!, color = Color.Red, modifier = Modifier.padding(top = 8.dp))
+            }
 
-@Composable
-fun RegisterButton(
-    text: String,
-    containerColor: Color = Color.Transparent,
-    contentColor: Color = Color.White,
-    border: BorderStroke? = null,
-    onClick: () -> Unit = {}
-) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = containerColor, contentColor = contentColor),
-        shape =CircleShape,
-        border = border
-    ) {
-        Text(text = text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            Spacer(Modifier.weight(1f))
+
+            Button(
+                onClick = { vistaModeloAutenticacion.register(contrasena) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954))
+            ) {
+                Text("Registrarse", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }

@@ -25,168 +25,121 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 import androidx.compose.foundation.clickable
 
 /**
- * Pantalla completa del reproductor.
- * Muestra el arte del álbum en grande y todos los controles de la pista actual.
+ * PlayerScreen: Pantalla completa del reproductor.
+ * Se abre con una animación hacia arriba y muestra todos los controles de la canción actual.
  */
 @Composable
 fun PlayerScreen(
-    navController: NavHostController,
-    musicViewModel: MusicViewModel,
-    authViewModel: AuthViewModel
+    controladorNavegacion: NavHostController,
+    vistaModeloMusica: MusicViewModel,
+    vistaModeloAutenticacion: AuthViewModel
 ) {
-    val currentSong by musicViewModel.currentSong.collectAsState()
-    val isPlaying by musicViewModel.isPlaying.collectAsState()
-    val currentPosition by musicViewModel.currentPosition.collectAsState()
-    val duration by musicViewModel.duration.collectAsState()
-    val userState by authViewModel.userState.collectAsState()
-    val favorites by musicViewModel.favorites.collectAsState()
+    // 1. Estados reactivos del reproductor
+    val cancionActual by vistaModeloMusica.currentSong.collectAsState()
+    val estaReproduciendo by vistaModeloMusica.isPlaying.collectAsState()
+    val posicionActual by vistaModeloMusica.currentPosition.collectAsState()
+    val duracionTotal by vistaModeloMusica.duration.collectAsState()
+    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    val listaFavoritos by vistaModeloMusica.favorites.collectAsState()
 
-    if (currentSong == null) return
+    // Si no hay canción, no dibujamos nada
+    if (cancionActual == null) return
 
-    val isFavorite = favorites.any { it.id == currentSong?.id }
+    val esFavorita = listaFavoritos.any { it.id == cancionActual?.id }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF503691), Color.Black)
-                )
-            )
+            .background(brush = Brush.verticalGradient(colors = listOf(Color(0xFF503691), Color.Black)))
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Bar
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Cerrar", tint = Color.White, modifier = Modifier.size(32.dp))
+        // Cabecera: Botón de bajar y Título de contexto
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                Icon(Icons.Default.KeyboardArrowDown, "Cerrar", tint = Color.White, modifier = Modifier.size(32.dp))
             }
-            Text(
-                text = "REPRODUCIENDO DESDE ÁLBUM",
-                color = Color.White,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Opciones", tint = Color.White)
-            }
+            Text("REPRODUCIENDO", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.MoreVert, null, tint = Color.White)
         }
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(Modifier.height(48.dp))
 
-        // Album Cover
+        // Portada del álbum en grande
         AsyncImage(
-            model = currentSong?.coverUrl,
+            model = cancionActual?.coverUrl,
             contentDescription = null,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(1f)
-                .clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(8.dp)),
             contentScale = ContentScale.Crop
         )
 
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(Modifier.height(48.dp))
 
-        // Song Info & Like Button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        // Info de Canción y Botón de Like
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = currentSong?.title ?: "",
-                    color = Color.White,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = currentSong?.artist ?: "",
-                    color = Color.LightGray,
-                    fontSize = 18.sp
-                )
+                Text(cancionActual?.title ?: "", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                Text(cancionActual?.artist ?: "", color = Color.LightGray, fontSize = 18.sp)
             }
             IconButton(onClick = { 
-                currentSong?.let { musicViewModel.toggleFavorite(userState.uid, it.id) }
+                cancionActual?.let { vistaModeloMusica.toggleFavorite(estadoUsuario.uid, it.id) }
             }) {
                 Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Me gusta",
-                    tint = if (isFavorite) Color(0xFF1DB954) else Color.White,
+                    imageVector = if (esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                    contentDescription = null,
+                    tint = if (esFavorita) Color(0xFF1DB954) else Color.White,
                     modifier = Modifier.size(32.dp)
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Slider (Progress Bar)
+        // --- BARRA DE PROGRESO (SLIDER) ---
         Slider(
-            value = currentPosition,
-            onValueChange = { musicViewModel.seekTo(it) },
-            valueRange = 0f..duration.coerceAtLeast(1f),
-            colors = SliderDefaults.colors(
-                thumbColor = Color.White,
-                activeTrackColor = Color.White,
-                inactiveTrackColor = Color.Gray.copy(alpha = 0.5f)
-            )
+            value = posicionActual,
+            onValueChange = { vistaModeloMusica.seekTo(it) },
+            valueRange = 0f..duracionTotal.coerceAtLeast(1f),
+            colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White)
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(text = formatTime(currentPosition.toInt()), color = Color.LightGray, fontSize = 12.sp)
-            Text(text = formatTime(duration.toInt()), color = Color.LightGray, fontSize = 12.sp)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(formatearTiempo(posicionActual.toInt()), color = Color.LightGray, fontSize = 12.sp)
+            Text(formatearTiempo(duracionTotal.toInt()), color = Color.LightGray, fontSize = 12.sp)
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // Panel de Controles: Shuffle, Anterior, Play/Pause, Siguiente, Repeat
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.Shuffle, contentDescription = "Aleatorio", tint = Color.LightGray, modifier = Modifier.size(24.dp))
+        // --- CONTROLES DE REPRODUCCIÓN ---
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Shuffle, null, tint = Color.LightGray)
+            
+            IconButton(onClick = { vistaModeloMusica.playPreviousSong() }) {
+                Icon(Icons.Default.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            IconButton(onClick = { musicViewModel.playPreviousSong() }) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
-            }
+            
+            // Botón central de Play/Pause
             Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(Color.White)
-                    .clickable { musicViewModel.togglePlayPause() },
+                modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White).clickable { vistaModeloMusica.togglePlayPause() },
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = "Reproducir/Pausar",
-                    tint = Color.Black,
-                    modifier = Modifier.size(40.dp)
-                )
+                Icon(if (estaReproduciendo) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
             }
-            IconButton(onClick = { musicViewModel.playNextSong() }) {
-                Icon(Icons.Default.SkipNext, contentDescription = "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
+
+            IconButton(onClick = { vistaModeloMusica.playNextSong() }) {
+                Icon(Icons.Default.SkipNext, "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            IconButton(onClick = { }) {
-                Icon(Icons.Default.Repeat, contentDescription = "Repetir", tint = Color.LightGray, modifier = Modifier.size(24.dp))
-            }
+            
+            Icon(Icons.Default.Repeat, null, tint = Color.LightGray)
         }
     }
 }
 
-private fun formatTime(ms: Int): String {
-    val totalSeconds = ms / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
+/**
+ * Convierte milisegundos en formato mm:ss para mostrar en pantalla.
+ */
+private fun formatearTiempo(milisegundos: Int): String {
+    val totalSegundos = milisegundos / 1000
+    val minutos = totalSegundos / 60
+    val segundos = totalSegundos % 60
+    return "%d:%02d".format(minutos, segundos)
 }

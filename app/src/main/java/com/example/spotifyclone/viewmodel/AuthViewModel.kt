@@ -1,6 +1,7 @@
 package com.example.spotifyclone.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifyclone.data.UserPreferencesRepository
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -120,6 +123,39 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             authRepository.logout()
             userPrefs.clearUserSession()
             _isLoggedIn.value = false
+        }
+    }
+
+    fun updateProfilePicture(uriString: String) {
+        val uid = _userState.value.uid
+        if (uid.isEmpty()) return
+
+        viewModelScope.launch {
+            try {
+                val context = getApplication<Application>().applicationContext
+                val uri = Uri.parse(uriString)
+                
+                // Crear una copia local permanente de la imagen
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val file = File(context.filesDir, "profile_$uid.jpg")
+                val outputStream = FileOutputStream(file)
+                inputStream?.use { input ->
+                    outputStream.use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                
+                val localPath = file.absolutePath
+                
+                // Guardar la ruta local en Firestore
+                val result = authRepository.updateProfilePicture(uid, localPath)
+                if (result.isSuccess) {
+                    _userState.value = _userState.value.copy(photoUrl = localPath)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _error.value = "Error al procesar la imagen"
+            }
         }
     }
     

@@ -1,6 +1,8 @@
 package com.example.spotifyclone.ui.screens
 
-import androidx.compose.foundation.Image
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,160 +12,171 @@ import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import com.example.spotifyclone.R
+import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.AuthViewModel
 
+/**
+ * PanelUsuScreen: Menú lateral que se muestra como un diálogo.
+ * Permite gestionar la cuenta del usuario, cambiar foto y cerrar sesión.
+ */
 @Composable
-fun PanelUsuScreen(navController: NavHostController, authViewModel: AuthViewModel) {
-    Column(
+fun PanelUsuScreen(
+    controladorNavegacion: NavHostController, 
+    vistaModeloAutenticacion: AuthViewModel
+) {
+    // Obtenemos los datos del usuario autenticado
+    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    
+    // Herramienta para abrir la galería y elegir una foto
+    val lanzadorSelectorFoto = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            uri?.let {
+                // Si el usuario elige una foto, la procesamos en el ViewModel
+                vistaModeloAutenticacion.updateProfilePicture(it.toString())
+            }
+        }
+    )
+
+    // Contenedor principal con fondo semi-transparente
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
-            .padding(16.dp)
+            .background(Color.Black.copy(alpha = 0.4f))
+            .clickable { controladorNavegacion.popBackStack() } // Cierra al tocar fuera
     ) {
-        // 1 y 2. Perfil y Nombre
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+        // El panel blanco/negro real (ocupa el 82% del ancho)
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(0.82f)
+                .background(Color.Black)
+                .clickable(enabled = false) {} // Evita que los clics dentro cierren el panel
+                .padding(16.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.perfil),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape),
-                contentScale = ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column {
-                Text(
-                    text = "Grupo Dev",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-                Text(
-                    text = "Ver perfil",
-                    color = Color.Gray,
-                    fontSize = 12.sp
-                )
-            }
-        }
-
-        // 3. Línea blanca horizontal delgada
-        HorizontalDivider(
-            modifier = Modifier.padding(vertical = 16.dp),
-            thickness = 0.5.dp,
-            color = Color.White.copy(alpha = 0.3f)
-        )
-
-        // 4. Opciones de lista
-        OptionItem(Icons.Default.AddCircle, "Agregar Cuenta")
-        OptionItem(Icons.Default.History, "Recientes")
-        OptionItem(Icons.Default.Campaign, "Tus avisos")
-        OptionItem(Icons.Default.Settings, "Configuración y privacidad")
-        OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", onClick = {
-            authViewModel.logout()
-        })
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Sección de Activity e Invitar
-        Row(modifier = Modifier.fillMaxWidth()) {
-            // Activity
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(
-                    painter = painterResource(id = R.drawable.perfil),
-                    contentDescription = null,
-                    modifier = Modifier.size(60.dp).clip(CircleShape)
-                )
-                Text("Activity", color = Color.White, fontSize = 12.sp)
-                Text("Activar", color = Color.Gray, fontSize = 11.sp)
-            }
-
-            Spacer(modifier = Modifier.width(24.dp))
-
-            // Invitar amigos
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(Color.DarkGray),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, tint = Color.White)
+            // 1. Cabecera con Perfil y Nombre
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+            ) {
+                // Foto de perfil
+                if (estadoUsuario.photoUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = estadoUsuario.photoUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(50.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Icon(Icons.Default.AccountCircle, null, Modifier.size(50.dp), tint = Color.Gray)
                 }
-                Text("Invitar a amigos", color = Color.White, fontSize = 12.sp)
+                
+                Spacer(modifier = Modifier.width(12.dp))
+                
+                // Nombre del usuario (O fragmento del correo si no hay nombre)
+                Column {
+                    val nombreAMostrar = if (estadoUsuario.name.isNotEmpty()) {
+                        estadoUsuario.name
+                    } else if (estadoUsuario.email.isNotEmpty()) {
+                        estadoUsuario.email.substringBefore("@")
+                    } else {
+                        "Usuario"
+                    }
+                    Text(nombreAMostrar, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Ver perfil", color = Color.Gray, fontSize = 12.sp)
+                }
             }
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            HorizontalDivider(Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
 
-        // Sección Mensajes
-        Text(
-            text = "Mensajes",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
+            // 2. Lista de Opciones
+            OptionItem(Icons.Default.AddCircle, "Agregar Cuenta")
+            
+            // Opción para disparar el selector de fotos
+            OptionItem(Icons.Default.Image, "Cambiar foto de perfil", alPulsar = {
+                lanzadorSelectorFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            })
+            
+            OptionItem(Icons.Default.History, "Recientes")
+            OptionItem(Icons.Default.Campaign, "Tus avisos")
+            OptionItem(Icons.Default.Settings, "Configuración y privacidad")
+            
+            // Opción para cerrar sesión
+            OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", alPulsar = {
+                vistaModeloAutenticacion.logout()
+            })
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 3. Sección de Actividad e Invitación
+            Row(modifier = Modifier.fillMaxWidth()) {
+                // Columna de Actividad
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (estadoUsuario.photoUrl.isNotEmpty()) {
+                        AsyncImage(
+                            model = estadoUsuario.photoUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(60.dp).clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.AccountCircle, null, Modifier.size(60.dp), tint = Color.Gray)
+                    }
+                    Text("Actividad", color = Color.White, fontSize = 12.sp)
+                    Text("Activar", color = Color.Gray, fontSize = 11.sp)
+                }
+
+                Spacer(modifier = Modifier.width(24.dp))
+
+                // Columna de Invitar
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.size(60.dp).clip(CircleShape).background(Color.DarkGray), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Add, null, tint = Color.White)
+                    }
+                    Text("Invitar a amigos", color = Color.White, fontSize = 12.sp)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // 4. Sección Mensajes
+            Text("Mensajes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "Comparte lo que te gusta con tus personas favoritas en Spotify",
                     color = Color.Gray,
-                    fontSize = 13.sp
+                    fontSize = 13.sp,
+                    modifier = Modifier.weight(1f)
                 )
+                Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
             }
-            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(Icons.Default.Description, contentDescription = null, tint = Color.White)
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Nuevo Mensaje
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(45.dp)
-                    .clip(CircleShape)
-                    .background(Color.DarkGray),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.NoteAdd, contentDescription = null, tint = Color.White)
-            }
-            Spacer(modifier = Modifier.width(12.dp))
-            Text("Nuevo mensaje", color = Color.White, fontWeight = FontWeight.Medium)
         }
     }
 }
 
+/**
+ * OptionItem: Fila simple para cada opción del menú.
+ */
 @Composable
-fun OptionItem(icon: ImageVector, text: String, onClick: () -> Unit = {}) {
+fun OptionItem(icono: ImageVector, titulo: String, alPulsar: () -> Unit = {}) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(vertical = 12.dp),
+        modifier = Modifier.fillMaxWidth().clickable { alPulsar() }.padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(28.dp))
+        Icon(icono, null, tint = Color.White, modifier = Modifier.size(28.dp))
         Spacer(modifier = Modifier.width(16.dp))
-        Text(text = text, color = Color.White, fontSize = 16.sp)
+        Text(text = titulo, color = Color.White, fontSize = 16.sp)
     }
 }
