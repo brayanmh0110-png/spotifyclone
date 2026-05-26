@@ -113,7 +113,7 @@ fun HomeScreen(
                         }
                     }
 
-                    // SECCIÓN: Mixes (Horizontal)
+                    // SECCIÓN: Mixes (Horizontal)//
                     item {
                         TituloSeccion("Tus mixes")
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
