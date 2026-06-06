@@ -90,9 +90,9 @@ fun HomeScreen(
                                     titulo = primerAlbum.title,
                                     urlImagen = primerAlbum.coverUrl,
                                     modifier = Modifier.weight(1f),
-                                    alPulsar = { 
-                                        vistaModeloMusica.loadSongsByAlbum(primerAlbum.songIds)
-                                        controladorNavegacion.navigate(Screen.AlbumDetail.route) 
+                                    alPulsar = {
+                                        vistaModeloMusica.seleccionarAlbum(primerAlbum)
+                                        controladorNavegacion.navigate(Screen.AlbumDetail.route)
                                     }
                                 )
                             }
@@ -122,7 +122,7 @@ fun HomeScreen(
                                     nombre = album.title, 
                                     urlImagen = album.coverUrl,
                                     alPulsar = {
-                                        vistaModeloMusica.loadSongsByAlbum(album.songIds)
+                                        vistaModeloMusica.seleccionarAlbum(album)
                                         controladorNavegacion.navigate(Screen.AlbumDetail.route)
                                     }
                                 )
@@ -135,7 +135,11 @@ fun HomeScreen(
                         TituloSeccion("Tus artistas favoritos")
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             items(listaArtistas) { artista ->
-                                ItemArtistaCircular(artista.name, artista.imageUrl)
+                                ItemArtistaCircular(
+                                    nombre = artista.name,
+                                    urlImagen = artista.imageUrl,
+                                    alPulsar = { controladorNavegacion.navigate(Screen.Library.route) }
+                                )
                             }
                         }
                     }
@@ -143,11 +147,12 @@ fun HomeScreen(
 
                 "Música" -> {
                     item { TituloSeccion("Últimos lanzamientos") }
-                    // Mostramos tarjetas detalladas para la sección de música
                     items(listaCanciones.take(5)) { cancion ->
-                        TarjetaLanzamientoDetallada(cancion) {
-                            vistaModeloMusica.playSong(cancion, listaCanciones)
-                        }
+                        TarjetaLanzamientoDetallada(
+                            cancion = cancion,
+                            alPulsar = { vistaModeloMusica.playSong(cancion, listaCanciones) },
+                            alAgregarAFavoritos = { vistaModeloMusica.toggleFavorite(datosUsuario.uid, cancion.id) }
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
@@ -247,7 +252,11 @@ fun BotonFiltro(texto: String, estaActivo: Boolean, alPulsar: () -> Unit) {
 }
 
 @Composable
-fun TarjetaLanzamientoDetallada(cancion: com.example.spotifyclone.model.Song, alPulsar: () -> Unit) {
+fun TarjetaLanzamientoDetallada(
+    cancion: com.example.spotifyclone.model.Song,
+    alPulsar: () -> Unit,
+    alAgregarAFavoritos: () -> Unit = {}
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { alPulsar() },
         colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E)),
@@ -274,7 +283,6 @@ fun TarjetaLanzamientoDetallada(cancion: com.example.spotifyclone.model.Song, al
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Etiqueta de "Avance"
                 Surface(color = Color.DarkGray.copy(alpha = 0.5f), shape = CircleShape) {
                     Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Shuffle, null, tint = Color.Gray, modifier = Modifier.size(14.dp))
@@ -282,11 +290,14 @@ fun TarjetaLanzamientoDetallada(cancion: com.example.spotifyclone.model.Song, al
                         Text("Avance disponible", color = Color.White, fontSize = 11.sp)
                     }
                 }
-                // Botones de acción
-                Row {
-                    Icon(Icons.Default.AddCircleOutline, null, tint = Color.White)
-                    Spacer(Modifier.width(16.dp))
-                    Icon(Icons.Default.PlayCircle, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                // Botones de acción ahora funcionales
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { alAgregarAFavoritos() }) {
+                        Icon(Icons.Default.AddCircleOutline, "Agregar a favoritos", tint = Color.White)
+                    }
+                    IconButton(onClick = { alPulsar() }) {
+                        Icon(Icons.Default.PlayCircle, "Reproducir", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
                 }
             }
         }
@@ -342,8 +353,8 @@ fun TarjetaMixHorizontal(nombre: String, urlImagen: String, alPulsar: () -> Unit
 }
 
 @Composable
-fun ItemArtistaCircular(nombre: String, urlImagen: String) {
-    Column(modifier = Modifier.width(120.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+fun ItemArtistaCircular(nombre: String, urlImagen: String, alPulsar: () -> Unit = {}) {
+    Column(modifier = Modifier.width(120.dp).clickable { alPulsar() }, horizontalAlignment = Alignment.CenterHorizontally) {
         AsyncImage(urlImagen, null, Modifier.size(120.dp).clip(CircleShape), contentScale = ContentScale.Crop)
         Spacer(modifier = Modifier.height(8.dp))
         Text(nombre, color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center)

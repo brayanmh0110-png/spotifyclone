@@ -1,5 +1,6 @@
 package com.example.spotifyclone.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -23,6 +25,7 @@ import com.example.spotifyclone.navigation.Screen
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginOptionsScreen(navController: NavHostController) {
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -74,13 +77,29 @@ fun LoginOptionsScreen(navController: NavHostController) {
                     onClick = { navController.navigate(Screen.LoginEmail.route) }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                LoginOptionButton(text = "Continuar con número de teléfono", border = BorderStroke(1.dp, Color.White))
+                LoginOptionButton(
+                    text = "Continuar con número de teléfono",
+                    border = BorderStroke(1.dp, Color.White),
+                    onClick = { Toast.makeText(context, "Inicio por teléfono próximamente", Toast.LENGTH_SHORT).show() }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                LoginOptionButton(text = "Continuar con Google", border = BorderStroke(1.dp, Color.White))
+                LoginOptionButton(
+                    text = "Continuar con Google",
+                    border = BorderStroke(1.dp, Color.White),
+                    onClick = { Toast.makeText(context, "Inicio con Google próximamente", Toast.LENGTH_SHORT).show() }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                LoginOptionButton(text = "Iniciar sesión con Facebook", border = BorderStroke(1.dp, Color.White))
+                LoginOptionButton(
+                    text = "Iniciar sesión con Facebook",
+                    border = BorderStroke(1.dp, Color.White),
+                    onClick = { Toast.makeText(context, "Inicio con Facebook próximamente", Toast.LENGTH_SHORT).show() }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
-                LoginOptionButton(text = "Continuar con Apple", border = BorderStroke(1.dp, Color.White))
+                LoginOptionButton(
+                    text = "Continuar con Apple",
+                    border = BorderStroke(1.dp, Color.White),
+                    onClick = { Toast.makeText(context, "Inicio con Apple próximamente", Toast.LENGTH_SHORT).show() }
+                )
             }
         }
     }

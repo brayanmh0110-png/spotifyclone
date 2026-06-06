@@ -111,27 +111,37 @@ fun SearchScreen(
             } else {
                 // SECCIÓN: Exploración (cuando no hay búsqueda activa)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                    // Descubre algo nuevo para ti
                     item {
                         Text("Descubre algo nuevo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             val sugerencias = listOf(
-                                Pair("#pop", "https://picsum.photos/seed/10/300/500"),
-                                Pair("#rock", "https://picsum.photos/seed/11/300/500"),
-                                Pair("#lofi", "https://picsum.photos/seed/12/300/500")
+                                Pair("pop", "https://picsum.photos/seed/10/300/500"),
+                                Pair("rock", "https://picsum.photos/seed/11/300/500"),
+                                Pair("lofi", "https://picsum.photos/seed/12/300/500")
                             )
-                            items(sugerencias) { item ->
-                                TarjetaSugerenciaVertical(titulo = item.first, urlImagen = item.second)
+                            items(sugerencias) { (termino, url) ->
+                                TarjetaSugerenciaVertical(
+                                    titulo = "#$termino",
+                                    urlImagen = url,
+                                    alPulsar = {
+                                        textoBusqueda = termino
+                                        vistaModeloMusica.searchSongs(termino)
+                                    }
+                                )
                             }
                         }
                     }
 
-                    // Explorar todo (Cuadrícula de categorías)
                     item {
                         Text("Explorar todo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
-                        CuadriculaExplorar()
+                        CuadriculaExplorar(
+                            alBuscar = { termino ->
+                                textoBusqueda = termino
+                                vistaModeloMusica.searchSongs(termino)
+                            }
+                        )
                     }
                 }
             }
@@ -162,8 +172,8 @@ fun ItemCancionBusqueda(cancion: Song, alPulsar: () -> Unit) {
 }
 
 @Composable
-fun TarjetaSugerenciaVertical(titulo: String, urlImagen: String) {
-    Box(modifier = Modifier.width(140.dp).height(200.dp).clip(RoundedCornerShape(8.dp))) {
+fun TarjetaSugerenciaVertical(titulo: String, urlImagen: String, alPulsar: () -> Unit = {}) {
+    Box(modifier = Modifier.width(140.dp).height(200.dp).clip(RoundedCornerShape(8.dp)).clickable { alPulsar() }) {
         AsyncImage(urlImagen, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Text(
             text = titulo,
@@ -176,19 +186,24 @@ fun TarjetaSugerenciaVertical(titulo: String, urlImagen: String) {
 }
 
 @Composable
-fun CuadriculaExplorar() {
+fun CuadriculaExplorar(alBuscar: (String) -> Unit = {}) {
     val categorias = listOf(
         Pair("Música", Color(0xFFE13300)),
         Pair("Podcasts", Color(0xFF1E3264)),
         Pair("En vivo", Color(0xFF8D67AB)),
         Pair("Para ti", Color(0xFF1E3264))
     )
-    
+
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         categorias.chunked(2).forEach { fila ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                fila.forEach { categoria ->
-                    TarjetaCategoria(categoria.first, categoria.second, Modifier.weight(1f))
+                fila.forEach { (nombre, color) ->
+                    TarjetaCategoria(
+                        nombre = nombre,
+                        color = color,
+                        modifier = Modifier.weight(1f),
+                        alPulsar = { alBuscar(nombre) }
+                    )
                 }
             }
         }
@@ -196,12 +211,13 @@ fun CuadriculaExplorar() {
 }
 
 @Composable
-fun TarjetaCategoria(nombre: String, color: Color, modifier: Modifier = Modifier) {
+fun TarjetaCategoria(nombre: String, color: Color, modifier: Modifier = Modifier, alPulsar: () -> Unit = {}) {
     Box(
         modifier = modifier
             .height(90.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(color)
+            .clickable { alPulsar() }
             .padding(8.dp)
     ) {
         Text(nombre, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)

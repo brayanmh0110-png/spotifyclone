@@ -28,7 +28,11 @@ sealed class Screen(val route: String) {
     data object LikedSongs : Screen("liked_songs")
     data object Player : Screen("player")
     data object Library : Screen("library")
+    data object CreatePlaylist : Screen("create_playlist")
     data object Search : Screen("search")
+    data object PlaylistDetail : Screen("playlist_detail/{playlistId}") {
+        fun crearRuta(playlistId: String) = "playlist_detail/$playlistId"
+    }
 }
 
 /**
@@ -93,8 +97,9 @@ fun SpotifyNavHost(
         
         composable(Screen.AlbumDetail.route) {
             AlbumDetailScreen(
-                controladorNavegacion = navController, 
-                vistaModeloMusica = musicViewModel
+                controladorNavegacion = navController,
+                vistaModeloMusica = musicViewModel,
+                vistaModeloAutenticacion = authViewModel
             )
         }
         
@@ -119,8 +124,27 @@ fun SpotifyNavHost(
 
         composable(Screen.Library.route) {
             LibraryScreen(
-                controladorNavegacion = navController, 
-                vistaModeloMusica = musicViewModel
+                controladorNavegacion = navController,
+                vistaModeloMusica = musicViewModel,
+                vistaModeloAutenticacion = authViewModel
+            )
+        }
+
+        composable(Screen.CreatePlaylist.route) {
+            CrearPlaylistScreen(
+                controladorNavegacion = navController,
+                vistaModeloMusica = musicViewModel,
+                vistaModeloAutenticacion = authViewModel
+            )
+        }
+
+        composable(Screen.PlaylistDetail.route) { backStackEntry ->
+            val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
+            PlaylistScreen(
+                playlistId = playlistId,
+                controladorNavegacion = navController,
+                vistaModeloMusica = musicViewModel,
+                vistaModeloAutenticacion = authViewModel
             )
         }
 

@@ -1,5 +1,6 @@
 package com.example.spotifyclone.ui.screens
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,11 +21,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
+import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.viewmodel.AuthViewModel
 
 /**
@@ -36,10 +39,9 @@ fun PanelUsuScreen(
     controladorNavegacion: NavHostController, 
     vistaModeloAutenticacion: AuthViewModel
 ) {
-    // Obtenemos los datos del usuario autenticado
+    val context = LocalContext.current
     val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
-    
-    // Herramienta para abrir la galería y elegir una foto
+
     val lanzadorSelectorFoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
@@ -102,18 +104,27 @@ fun PanelUsuScreen(
             HorizontalDivider(Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
 
             // 2. Lista de Opciones
-            OptionItem(Icons.Default.AddCircle, "Agregar Cuenta")
-            
-            // Opción para disparar el selector de fotos
+            OptionItem(Icons.Default.AddCircle, "Agregar Cuenta", alPulsar = {
+                Toast.makeText(context, "Función de múltiples cuentas próximamente", Toast.LENGTH_SHORT).show()
+            })
+
             OptionItem(Icons.Default.Image, "Cambiar foto de perfil", alPulsar = {
                 lanzadorSelectorFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             })
-            
-            OptionItem(Icons.Default.History, "Recientes")
-            OptionItem(Icons.Default.Campaign, "Tus avisos")
-            OptionItem(Icons.Default.Settings, "Configuración y privacidad")
-            
-            // Opción para cerrar sesión
+
+            OptionItem(Icons.Default.History, "Recientes", alPulsar = {
+                controladorNavegacion.popBackStack()
+                controladorNavegacion.navigate(Screen.Home.route)
+            })
+
+            OptionItem(Icons.Default.Campaign, "Tus avisos", alPulsar = {
+                Toast.makeText(context, "No tienes avisos nuevos", Toast.LENGTH_SHORT).show()
+            })
+
+            OptionItem(Icons.Default.Settings, "Configuración y privacidad", alPulsar = {
+                Toast.makeText(context, "Configuración próximamente", Toast.LENGTH_SHORT).show()
+            })
+
             OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", alPulsar = {
                 vistaModeloAutenticacion.logout()
             })
@@ -122,26 +133,29 @@ fun PanelUsuScreen(
 
             // 3. Sección de Actividad e Invitación
             Row(modifier = Modifier.fillMaxWidth()) {
-                // Columna de Actividad
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.clickable {
+                        Toast.makeText(context, "Activa tu actividad para compartir lo que escuchas", Toast.LENGTH_SHORT).show()
+                    },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     if (estadoUsuario.photoUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = estadoUsuario.photoUrl,
-                            contentDescription = null,
-                            modifier = Modifier.size(60.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
+                        AsyncImage(model = estadoUsuario.photoUrl, contentDescription = null, modifier = Modifier.size(60.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                     } else {
                         Icon(Icons.Default.AccountCircle, null, Modifier.size(60.dp), tint = Color.Gray)
                     }
                     Text("Actividad", color = Color.White, fontSize = 12.sp)
-                    Text("Activar", color = Color.Gray, fontSize = 11.sp)
+                    Text("Activar", color = Color(0xFF1DB954), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.width(24.dp))
 
-                // Columna de Invitar
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    modifier = Modifier.clickable {
+                        Toast.makeText(context, "Función de invitación próximamente", Toast.LENGTH_SHORT).show()
+                    },
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Box(Modifier.size(60.dp).clip(CircleShape).background(Color.DarkGray), contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Add, null, tint = Color.White)
                     }
@@ -153,7 +167,13 @@ fun PanelUsuScreen(
 
             // 4. Sección Mensajes
             Text("Mensajes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { Toast.makeText(context, "No tienes mensajes nuevos", Toast.LENGTH_SHORT).show() }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
                     text = "Comparte lo que te gusta con tus personas favoritas en Spotify",
                     color = Color.Gray,

@@ -1,7 +1,9 @@
 package com.example.spotifyclone.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,9 +22,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
-import com.example.spotifyclone.viewmodel.MusicViewModel
 import com.example.spotifyclone.viewmodel.AuthViewModel
-import androidx.compose.foundation.clickable
+import com.example.spotifyclone.viewmodel.ModoRepeticion
+import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
  * PlayerScreen: Pantalla completa del reproductor.
@@ -41,6 +43,18 @@ fun PlayerScreen(
     val duracionTotal by vistaModeloMusica.duration.collectAsState()
     val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
     val listaFavoritos by vistaModeloMusica.favorites.collectAsState()
+    val esModoAleatorio by vistaModeloMusica.esModoAleatorio.collectAsState()
+    val modoRepeticion by vistaModeloMusica.modoRepeticion.collectAsState()
+    val listaPlaylists by vistaModeloMusica.playlists.collectAsState()
+
+    var menuExpandido by remember { mutableStateOf(false) }
+    var cancionParaPlaylist by remember { mutableStateOf(false) }
+
+    LaunchedEffect(estadoUsuario.uid) {
+        if (estadoUsuario.uid.isNotEmpty()) {
+            vistaModeloMusica.cargarPlaylists(estadoUsuario.uid)
+        }
+    }
 
     // Si no hay canción, no dibujamos nada
     if (cancionActual == null) return
@@ -60,7 +74,29 @@ fun PlayerScreen(
                 Icon(Icons.Default.KeyboardArrowDown, "Cerrar", tint = Color.White, modifier = Modifier.size(32.dp))
             }
             Text("REPRODUCIENDO", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Icon(Icons.Default.MoreVert, null, tint = Color.White)
+            Box {
+                IconButton(onClick = { menuExpandido = true }) {
+                    Icon(Icons.Default.MoreVert, "Opciones", tint = Color.White)
+                }
+                DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Agregar a la cola") },
+                        leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
+                        onClick = {
+                            cancionActual?.let { vistaModeloMusica.agregarALaCola(it) }
+                            menuExpandido = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Agregar a playlist") },
+                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, null) },
+                        onClick = {
+                            cancionParaPlaylist = true
+                            menuExpandido = false
+                        }
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(48.dp))
@@ -111,12 +147,19 @@ fun PlayerScreen(
 
         // --- CONTROLES DE REPRODUCCIÓN ---
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Shuffle, null, tint = Color.LightGray)
-            
+            // Botón Aleatorio: verde cuando está activo
+            IconButton(onClick = { vistaModeloMusica.alternarAleatorio() }) {
+                Icon(
+                    imageVector = Icons.Default.Shuffle,
+                    contentDescription = "Aleatorio",
+                    tint = if (esModoAleatorio) Color(0xFF1DB954) else Color.LightGray
+                )
+            }
+
             IconButton(onClick = { vistaModeloMusica.playPreviousSong() }) {
                 Icon(Icons.Default.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            
+
             // Botón central de Play/Pause
             Box(
                 modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White).clickable { vistaModeloMusica.togglePlayPause() },
@@ -128,9 +171,56 @@ fun PlayerScreen(
             IconButton(onClick = { vistaModeloMusica.playNextSong() }) {
                 Icon(Icons.Default.SkipNext, "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
             }
-            
-            Icon(Icons.Default.Repeat, null, tint = Color.LightGray)
+
+            // Botón Repetir: verde y con ícono diferente según el modo activo
+            IconButton(onClick = { vistaModeloMusica.cambiarModoRepeticion() }) {
+                Icon(
+                    imageVector = if (modoRepeticion == ModoRepeticion.UNO) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                    contentDescription = "Repetir",
+                    tint = if (modoRepeticion == ModoRepeticion.NINGUNO) Color.LightGray else Color(0xFF1DB954)
+                )
+            }
         }
+    }
+
+    // Diálogo para agregar la canción actual a una playlist
+    if (cancionParaPlaylist) {
+        AlertDialog(
+            onDismissRequest = { cancionParaPlaylist = false },
+            title = { Text("Agregar a playlist", color = Color.White) },
+            text = {
+                if (listaPlaylists.isEmpty()) {
+                    Text("No tienes playlists aún.\nCrea una desde Tu Biblioteca.", color = Color.Gray)
+                } else {
+                    androidx.compose.foundation.lazy.LazyColumn {
+                        items(listaPlaylists) { playlist ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        cancionActual?.let {
+                                            vistaModeloMusica.agregarCancionAPlaylist(estadoUsuario.uid, playlist.id, it.id)
+                                        }
+                                        cancionParaPlaylist = false
+                                    }
+                                    .padding(vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.QueueMusic, null, tint = Color(0xFF1DB954))
+                                Spacer(Modifier.width(12.dp))
+                                Text(playlist.name, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { cancionParaPlaylist = false }) {
+                    Text("Cerrar", color = Color.Gray)
+                }
+            },
+            containerColor = Color(0xFF282828)
+        )
     }
 }
 

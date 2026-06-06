@@ -1,5 +1,6 @@
 package com.example.spotifyclone.viewmodel
 
+import android.media.MediaPlayer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifyclone.model.Album
@@ -8,12 +9,13 @@ import com.example.spotifyclone.model.Genre
 import com.example.spotifyclone.model.Playlist
 import com.example.spotifyclone.model.Song
 import com.example.spotifyclone.repository.MusicRepository
-import android.media.MediaPlayer
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+enum class ModoRepeticion { NINGUNO, UNO, TODO }
 
 /**
  * ViewModel central para la gestión de música y el estado del reproductor.
@@ -62,6 +64,21 @@ class MusicViewModel : ViewModel() {
 
     private val _duration = MutableStateFlow(0f)
     val duration: StateFlow<Float> = _duration.asStateFlow()
+
+    // --- RF07: Shuffle y Repeat ---
+    private val _esModoAleatorio = MutableStateFlow(false)
+    val esModoAleatorio: StateFlow<Boolean> = _esModoAleatorio.asStateFlow()
+
+    private val _modoRepeticion = MutableStateFlow(ModoRepeticion.NINGUNO)
+    val modoRepeticion: StateFlow<ModoRepeticion> = _modoRepeticion.asStateFlow()
+
+    // --- RF11/RF12: Playlists del usuario ---
+    private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
+    val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
+
+    // --- RF14: Álbum seleccionado actualmente ---
+    private val _albumActual = MutableStateFlow<Album?>(null)
+    val albumActual: StateFlow<Album?> = _albumActual.asStateFlow()
 
     private var mediaPlayer: MediaPlayer? = null
 
@@ -128,17 +145,30 @@ class MusicViewModel : ViewModel() {
     }
 
     /**
-     * Salta a la siguiente canción en la cola de reproducción.
+     * Salta a la siguiente canción respetando el modo de repetición y aleatorio.
      */
     fun playNextSong() {
-        val currentList = _currentPlaylist.value
-        val currentIndex = currentList.indexOfFirst { it.id == _currentSong.value?.id }
-        
-        if (currentIndex != -1 && currentIndex < currentList.size - 1) {
-            playSong(currentList[currentIndex + 1])
-        } else if (currentList.isNotEmpty()) {
-            playSong(currentList[0]) // Vuelve al inicio si terminó la lista
+        val listaActual = _currentPlaylist.value
+        val indexActual = listaActual.indexOfFirst { it.id == _currentSong.value?.id }
+
+        val siguienteCancion: Song? = when (_modoRepeticion.value) {
+            ModoRepeticion.UNO -> _currentSong.value
+            ModoRepeticion.TODO -> {
+                if (_esModoAleatorio.value) {
+                    listaActual.filter { it.id != _currentSong.value?.id }.randomOrNull()
+                } else {
+                    listaActual.getOrNull(indexActual + 1) ?: listaActual.firstOrNull()
+                }
+            }
+            ModoRepeticion.NINGUNO -> {
+                if (_esModoAleatorio.value) {
+                    listaActual.filter { it.id != _currentSong.value?.id }.randomOrNull()
+                } else {
+                    listaActual.getOrNull(indexActual + 1)
+                }
+            }
         }
+        siguienteCancion?.let { playSong(it) }
     }
 
     /**
@@ -312,5 +342,71 @@ class MusicViewModel : ViewModel() {
         viewModelScope.launch {
             repository.updatePlaylist(userId, playlist)
         }
+    }
+
+    // --- RF07: Activa o desactiva el modo aleatorio ---
+    fun alternarAleatorio() {
+        _esModoAleatorio.value = !_esModoAleatorio.value
+    }
+
+    // --- RF07: Cambia el modo de repetición: Ninguno → Todo → Uno → Ninguno ---
+    fun cambiarModoRepeticion() {
+        _modoRepeticion.value = when (_modoRepeticion.value) {
+            ModoRepeticion.NINGUNO -> ModoRepeticion.TODO
+            ModoRepeticion.TODO   -> ModoRepeticion.UNO
+            ModoRepeticion.UNO   -> ModoRepeticion.NINGUNO
+        }
+    }
+
+    // --- RF08: Inserta una canción justo después de la que está sonando ---
+    fun agregarALaCola(cancion: Song) {
+        val lista = _currentPlaylist.value.toMutableList()
+        if (lista.none { it.id == cancion.id }) {
+            val indexActual = lista.indexOfFirst { it.id == _currentSong.value?.id }
+            val insertarEn = if (indexActual >= 0) indexActual + 1 else lista.size
+            lista.add(insertarEn, cancion)
+            _currentPlaylist.value = lista
+        }
+    }
+
+    // --- RF11: Carga las playlists del usuario desde Firestore ---
+    fun cargarPlaylists(userId: String) {
+        viewModelScope.launch {
+            repository.getPlaylists(userId).collect { _playlists.value = it }
+        }
+    }
+
+    // --- RF11: Crea una nueva playlist vacía con el nombre dado ---
+    // onCreada recibe el id de la nueva playlist (útil para abrirla al instante).
+    fun crearPlaylist(userId: String, nombre: String, onCreada: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            val nuevoId = repository.crearPlaylist(userId, nombre)
+            // Recargamos aquí mismo para asegurar que la nueva playlist ya esté
+            // disponible antes de avisar y abrir su pantalla.
+            repository.getPlaylists(userId).collect { _playlists.value = it }
+            onCreada(nuevoId)
+        }
+    }
+
+    // --- RF12: Agrega una canción a una playlist existente ---
+    fun agregarCancionAPlaylist(userId: String, playlistId: String, songId: String) {
+        viewModelScope.launch {
+            repository.addSongToPlaylist(userId, playlistId, songId)
+            cargarPlaylists(userId)
+        }
+    }
+
+    // --- RF12: Quita una canción de una playlist ---
+    fun quitarCancionDePlaylist(userId: String, playlistId: String, songId: String) {
+        viewModelScope.launch {
+            repository.removeSongFromPlaylist(userId, playlistId, songId)
+            cargarPlaylists(userId)
+        }
+    }
+
+    // --- RF14: Guarda el álbum seleccionado y carga sus canciones ---
+    fun seleccionarAlbum(album: Album) {
+        _albumActual.value = album
+        loadSongsByAlbum(album.songIds)
     }
 }

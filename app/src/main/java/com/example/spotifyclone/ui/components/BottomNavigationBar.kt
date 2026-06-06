@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import android.widget.Toast
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -28,7 +30,8 @@ import com.example.spotifyclone.navigation.Screen
  */
 @Composable
 fun SpotifyBottomBar(navController: NavHostController, onCreateClick: () -> Unit) {
-    
+    val context = LocalContext.current
+
     // Contenedor de la barra de navegación (Material Design 3)
     NavigationBar(containerColor = Color.Black.copy(alpha = 0.9f)) {
         
@@ -52,8 +55,8 @@ fun SpotifyBottomBar(navController: NavHostController, onCreateClick: () -> Unit
                 selected = rutaActiva == ruta,
                 onClick = {
                     when (ruta) {
-                        "crear" -> onCreateClick() // Avisa a MainActivity que abra el menú
-                        "" -> { /* Opción no implementada aún */ }
+                        "crear" -> onCreateClick()
+                        "" -> Toast.makeText(context, "Hazte Premium para disfrutar sin límites", Toast.LENGTH_SHORT).show()
                         else -> {
                             // Navegación inteligente (evita duplicar pantallas en el historial)
                             if (rutaActiva != ruta) {
@@ -82,17 +85,13 @@ fun SpotifyBottomBar(navController: NavHostController, onCreateClick: () -> Unit
 
 /**
  * CreateOptionItem: Componente reutilizable para las opciones dentro del menú "Crear".
- * 
- * @param icon El icono representativo de la opción.
- * @param title Título principal (ej: Playlist).
- * @param subtitle Descripción breve (ej: Crea una playlist...).
  */
 @Composable
-fun CreateOptionItem(icon: ImageVector, title: String, subtitle: String) {
+fun CreateOptionItem(icon: ImageVector, title: String, subtitle: String, alPulsar: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Aquí se implementaría la creación real */ }
+            .clickable { alPulsar() }
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

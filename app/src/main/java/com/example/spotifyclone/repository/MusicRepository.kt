@@ -236,6 +236,46 @@ class MusicRepository {
     }
 
     /**
+     * Obtiene todas las playlists que pertenecen al usuario indicado.
+     */
+    fun getPlaylists(userId: String): Flow<List<Playlist>> = flow {
+        val snapshot = playlistsCollection.whereEqualTo("ownerId", userId).get().await()
+        emit(snapshot.toObjects(Playlist::class.java))
+    }
+
+    /**
+     * Crea una nueva playlist vacía con el nombre dado y la asigna al usuario.
+     * Devuelve el id de la playlist recién creada para poder abrirla.
+     */
+    suspend fun crearPlaylist(userId: String, nombre: String): String {
+        val id = "pl_${System.currentTimeMillis()}"
+        val playlist = Playlist(id = id, name = nombre, ownerId = userId)
+        playlistsCollection.document(id).set(playlist).await()
+        logActivity(userId, "Creó la playlist: $nombre")
+        return id
+    }
+
+    /**
+     * Agrega una canción a una playlist si el usuario tiene permiso de edición.
+     */
+    suspend fun addSongToPlaylist(userId: String, playlistId: String, songId: String) {
+        if (canEditPlaylist(userId, playlistId)) {
+            playlistsCollection.document(playlistId)
+                .update("songsIds", FieldValue.arrayUnion(songId)).await()
+        }
+    }
+
+    /**
+     * Quita una canción de una playlist si el usuario tiene permiso de edición.
+     */
+    suspend fun removeSongFromPlaylist(userId: String, playlistId: String, songId: String) {
+        if (canEditPlaylist(userId, playlistId)) {
+            playlistsCollection.document(playlistId)
+                .update("songsIds", FieldValue.arrayRemove(songId)).await()
+        }
+    }
+
+    /**
      * Realiza una búsqueda en vivo en la API de iTunes basándose en el query del usuario.
      * Retorna una lista de objetos Song con audio y carátula real.
      */

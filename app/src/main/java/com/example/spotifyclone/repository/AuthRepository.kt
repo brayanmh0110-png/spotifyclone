@@ -68,6 +68,8 @@ class AuthRepository {
     }
     
     fun validatePassword(password: String): Boolean {
-        return password.length >= 6
+        return password.length >= 8 &&
+               password.any { it.isDigit() } &&
+               password.any { !it.isLetterOrDigit() }
     }
 }

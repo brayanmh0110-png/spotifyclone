@@ -77,7 +77,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             return
         }
         if (!authRepository.validatePassword(password)) {
-            _error.value = "La contraseña debe tener al menos 6 caracteres"
+            _error.value = "La contraseña debe tener mínimo 8 caracteres, un número y un símbolo"
             return
         }
 

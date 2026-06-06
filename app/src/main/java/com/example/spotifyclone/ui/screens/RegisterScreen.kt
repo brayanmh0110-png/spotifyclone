@@ -70,7 +70,7 @@ fun RegisterScreen(
             OutlinedTextField(
                 value = contrasena,
                 onValueChange = { contrasena = it },
-                label = { Text("Contraseña (min. 6 caracteres)") },
+                label = { Text("Contraseña (8+ caracteres, número y símbolo)") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
             )

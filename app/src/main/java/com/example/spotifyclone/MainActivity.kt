@@ -1,6 +1,7 @@
 package com.example.spotifyclone
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -18,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -48,9 +50,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             SpotifycloneTheme {
                 // Herramientas esenciales para que la app funcione:
-                val controladorNavegacion = rememberNavController() // Gestiona el cambio entre pantallas
-                val vistaModeloAutenticacion: AuthViewModel = viewModel() // Maneja el login y usuario
-                val vistaModeloMusica: MusicViewModel = viewModel() // Maneja canciones y reproducción
+                val context = LocalContext.current
+                val controladorNavegacion = rememberNavController()
+                val vistaModeloAutenticacion: AuthViewModel = viewModel()
+                val vistaModeloMusica: MusicViewModel = viewModel()
 
                 // Estados que observamos en tiempo real:
                 val estaLogueado by vistaModeloAutenticacion.isLoggedIn.collectAsState()
@@ -143,11 +146,35 @@ class MainActivity : ComponentActivity() {
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color(0xFF282828))
                                 .padding(20.dp)
-                                .clickable(enabled = false) { } // Evita que el clic pase al fondo
+                                .clickable(enabled = false) { }
                         ) {
-                            CreateOptionItem(Icons.Default.MusicNote, "Playlist", "Crea una playlist con canciones o episodios")
-                            CreateOptionItem(Icons.Default.People, "Playlist colaborativa", "Crea una playlist con tus personas favoritas")
-                            CreateOptionItem(Icons.Default.AllInclusive, "Fusión", "Combina los gustos de tus personas favoritas en una playlist")
+                            CreateOptionItem(
+                                icon = Icons.Default.MusicNote,
+                                title = "Playlist",
+                                subtitle = "Crea una playlist con canciones o episodios",
+                                alPulsar = {
+                                    mostrarMenuCrear = false
+                                    controladorNavegacion.navigate(Screen.CreatePlaylist.route)
+                                }
+                            )
+                            CreateOptionItem(
+                                icon = Icons.Default.People,
+                                title = "Playlist colaborativa",
+                                subtitle = "Crea una playlist con tus personas favoritas",
+                                alPulsar = {
+                                    mostrarMenuCrear = false
+                                    Toast.makeText(context, "Playlists colaborativas próximamente", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                            CreateOptionItem(
+                                icon = Icons.Default.AllInclusive,
+                                title = "Fusión",
+                                subtitle = "Combina los gustos de tus personas favoritas en una playlist",
+                                alPulsar = {
+                                    mostrarMenuCrear = false
+                                    Toast.makeText(context, "Función Fusión próximamente", Toast.LENGTH_SHORT).show()
+                                }
+                            )
                         }
 
                         // 3. Botón circular "X" para cerrar el menú

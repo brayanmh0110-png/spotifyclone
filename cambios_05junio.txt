@@ -1,0 +1,36 @@
+RESUMEN DE CAMBIOS - 05 DE JUNIO
+Proyecto: Spotify Clone
+
+1. INFRAESTRUCTURA Y CONFIGURACIÓN (GRADLE)
+   - Integración del archivo google-services.json en el módulo /app.
+   - Activación del plugin de Google Services en build.gradle.kts (Proyecto y App).
+   - Configuración de dependencias en libs.versions.toml:
+     * Firebase BOM (v33.9.0).
+     * Firebase Auth KTX para gestión de usuarios.
+     * Firebase Firestore KTX para base de datos de perfiles.
+   - Sincronización exitosa del proyecto con el nuevo sistema de dependencias.
+
+2. CAPA DE DATOS Y PERSISTENCIA
+   - AuthRepository.kt:
+     * Implementación de métodos asíncronos para login y registro.
+     * Integración con Firestore para crear y recuperar el perfil del usuario (User model) automáticamente tras la autenticación.
+   - UserPreferencesRepository.kt:
+     * Configuración de Jetpack DataStore para guardar el UID y correo de forma local, permitiendo que la sesión sea persistente incluso si se cierra la aplicación.
+
+3. LÓGICA DE NEGOCIO (VIEWMODEL)
+   - AuthViewModel.kt:
+     * Gestión de estados (User, isLoggedIn, error) mediante StateFlow.
+     * Lógica de validación de campos (Email y Contraseña segura).
+     * Mapeo de errores de Firebase a mensajes amigables para el usuario (ej: "Correo ya registrado", "Contraseña incorrecta").
+     * Función de cierre de sesión con limpieza de DataStore.
+
+4. NAVEGACIÓN Y FLUJO DE USUARIO
+   - MainActivity.kt:
+     * Implementación de LaunchedEffect para observar el estado de autenticación.
+     * Redirección automática: si detecta una sesión activa, envía al usuario al Home; si se cierra sesión, lo devuelve a Welcome.
+   - NavGraph.kt:
+     * Definición de rutas y transiciones para el flujo: Welcome -> LoginOptions -> LoginEmail / Register.
+   - UI Screens:
+     * LoginEmailScreen.kt y RegisterScreen.kt vinculadas al AuthViewModel para una experiencia de usuario fluida.
+
+Estado actual: El sistema de autenticación está 100% operativo y conectado a Firebase.
