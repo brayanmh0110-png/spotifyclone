@@ -1,47 +1,38 @@
-# Guía de Presentación T2: Preguntas y Cambios Probables
+# Guía de Presentación T2: Preguntas y Cambios Probables (Actualizada)
 
-Esta guía te ayudará a responder las preguntas técnicas de tu profesor y a realizar cambios en vivo si te lo solicita.
+Esta guía te ayudará a responder las preguntas técnicas de tu profesor y a realizar cambios en vivo sobre las funciones de música y playlists.
 
-## 1. Preguntas sobre Arquitectura
+## 1. Preguntas sobre Playlists y Datos
 
-**P: ¿Por qué usaste MVVM y no pusiste la lógica directamente en las pantallas?**
-> *R: Para separar responsabilidades. La UI (Compose) solo se encarga de mostrar datos. El ViewModel gestiona el estado y la lógica, y el Repositorio maneja los datos. Esto hace que el código sea fácil de testear y mantener.*
+**P: ¿Cómo se guardan las playlists que crea el usuario?**
+> *R: Se guardan en una colección llamada `playlists` en Firestore. Cada documento de playlist tiene un campo `ownerId` (el ID del usuario) y un array `songsIds` con los IDs de las canciones agregadas.*
 
-**P: ¿Cómo se comunican los datos entre el Repositorio y la UI?**
-> *R: Usamos `StateFlow` y `Flow`. El Repositorio devuelve un flujo de datos de Firestore, el ViewModel lo recolecta y lo expone como un estado reactivo que la UI observa.*
+**P: ¿Cómo haces para que la música siga sonando al cambiar de pestaña?**
+> *R: El estado del reproductor y la instancia del `MediaPlayer` están en el `MusicViewModel`. Como el ViewModel vive mientras la actividad esté abierta, el audio no se interrumpe aunque el usuario navegue entre el Inicio, Buscar o la Biblioteca.*
 
----
-
-## 2. Preguntas sobre la API y Datos
-
-**P: ¿De dónde salen las 50 canciones? ¿Están guardadas en el código?**
-> *R: No están en el código. Al abrir la app, la función `seedFullProjectData` en `MusicRepository` las busca en la API de iTunes y las guarda en Firebase Firestore. La app solo lee de Firestore.*
-
-**P: ¿Por qué el audio dura solo 30 segundos?**
-> *R: Es una limitación legal de la iTunes API para desarrolladores (Previews). Permite demostrar el streaming sin infringir derechos de autor.*
+**P: ¿Cómo implementaste la eliminación de una playlist?**
+> *R: En el repositorio usamos `.delete()` sobre el documento de la playlist en Firestore. Antes de borrar, verificamos en el ViewModel que el usuario actual sea el dueño (`ownerId`).*
 
 ---
 
-## 3. Cambios en vivo (Lo que el profesor podría pedir)
+## 2. Cambios en vivo (Lo que el profesor podría pedir)
 
-### Solicitud: "Cambia el número de resultados de búsqueda de 10 a 5"
+### Solicitud: "Haz que al buscar solo salgan 3 canciones"
 - **Dónde ir:** `MusicRepository.kt` -> Función `searchSongs`.
-- **Qué cambiar:** Cambia `limit=10` por `limit=5` en la URL.
+- **Qué cambiar:** Cambia `limit=10` por `limit=3`.
 
-### Solicitud: "Cambia el color principal (Verde Spotify) por otro"
-- **Dónde ir:** `ui/theme/Color.kt`.
-- **Qué cambiar:** Cambia el valor de `val Green = Color(0xFF1DB954)` por otro código hexadecimal (ej: Azul `0xFF1D70B9`).
+### Solicitud: "Quita la opción de 'Agregar a la cola' de la Biblioteca"
+- **Dónde ir:** `ui/screens/LibraryScreen.kt` -> Componente `ItemCancionBiblioteca`.
+- **Qué cambiar:** Comenta o borra el primer `DropdownMenuItem` del menú.
 
-### Solicitud: "Añade un nuevo género musical"
-- **Dónde ir:** `MusicRepository.kt` -> Función `seedFullProjectData`.
-- **Qué cambiar:** Añade un nuevo objeto `Genre` a la lista `genres` y un nuevo set de canciones a la lista de `queries`.
+### Solicitud: "Cambia el icono de la pestaña Biblioteca"
+- **Dónde ir:** `ui/components/BottomNavigationBar.kt` (o donde esté definido el BottomBar).
+- **Qué cambiar:** Busca `Icons.Default.LibraryMusic` y cámbialo por `Icons.Default.List`.
 
 ---
 
-## 4. Conceptos Clave que DEBES dominar
-1. **Corrutinas (`suspend`, `async`):** Se usan para que la app no se congele mientras descarga música o consulta la base de datos.
-2. **Jetpack Compose:** Interfaz declarativa. En lugar de modificar vistas, "describimos" cómo debe verse el estado actual.
-3. **Firestore:** Base de datos NoSQL basada en Documentos y Colecciones.
-4. **MediaPlayer:** Clase nativa de Android para gestionar audio (preparar, iniciar, pausar).
+## 3. Lógica de Negocio (Para sustentar)
+- **Cola de Reproducción:** Al hacer clic en una canción dentro de una lista, pasamos la lista completa (`playlist`) a la función `playSong`. Así, el ViewModel sabe qué canción sigue después de la actual.
+- **Diferencia entre Favoritos y Playlist:** Favoritos es un array dentro del documento del **Usuario**. Las Playlists son documentos independientes en su propia **Colección**.
 
-**¡Mucha suerte en tu entrega mañana! El proyecto está sólido.**
+**¡Mucha suerte! Dominas el 100% de la lógica de red, base de datos y UI.**

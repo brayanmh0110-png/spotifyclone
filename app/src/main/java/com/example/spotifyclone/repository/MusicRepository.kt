@@ -295,6 +295,16 @@ class MusicRepository {
     }
 
     /**
+     * Elimina una playlist completa de la base de datos si el usuario tiene permiso.
+     */
+    suspend fun eliminarPlaylist(userId: String, playlistId: String) {
+        if (canEditPlaylist(userId, playlistId)) {
+            playlistsCollection.document(playlistId).delete().await()
+            logActivity(userId, "Eliminó la playlist: $playlistId")
+        }
+    }
+
+    /**
      * BUSCADOR EN VIVO: Busca canciones directamente en la API de iTunes.
      * Esto permite encontrar cualquier canción del mundo que esté en iTunes.
      */

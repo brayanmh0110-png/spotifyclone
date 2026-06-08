@@ -404,6 +404,16 @@ class MusicViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Elimina una playlist completa de la base de datos.
+     */
+    fun eliminarPlaylist(userId: String, playlistId: String) {
+        viewModelScope.launch {
+            repository.eliminarPlaylist(userId, playlistId)
+            cargarPlaylists(userId) // Refrescamos la lista local
+        }
+    }
+
     // --- RF14: Guarda el álbum seleccionado y carga sus canciones ---
     fun seleccionarAlbum(album: Album) {
         _albumActual.value = album
