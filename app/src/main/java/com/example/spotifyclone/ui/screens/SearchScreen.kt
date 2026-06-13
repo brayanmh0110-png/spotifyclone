@@ -1,5 +1,6 @@
 package com.example.spotifyclone.ui.screens
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -89,63 +90,65 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isSearching) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF1DB954))
-                }
-            } else if (searchQuery.isNotEmpty()) {
-                if (searchResults.isEmpty()) {
-                    Box(Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Search, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
-                            Spacer(Modifier.height(16.dp))
-                            Text("No se encontraron resultados", color = Color.White, fontWeight = FontWeight.Bold)
-                            Text("Asegúrate de que todo esté bien escrito.", color = Color.Gray, fontSize = 14.sp)
+            Crossfade(targetState = isSearching || searchQuery.isNotEmpty(), label = "SearchState") { hasQuery ->
+                if (isSearching) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF1DB954))
+                    }
+                } else if (hasQuery) {
+                    if (searchResults.isEmpty()) {
+                        Box(Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Search, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                                Spacer(Modifier.height(16.dp))
+                                Text("No se encontraron resultados", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Asegúrate de que todo esté bien escrito.", color = Color.Gray, fontSize = 14.sp)
+                            }
+                        }
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            items(searchResults) { song ->
+                                SearchSongItem(song) {
+                                    musicViewModel.playSong(song, searchResults)
+                                }
+                            }
+                            item { Spacer(Modifier.height(80.dp)) }
                         }
                     }
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(searchResults) { song ->
-                            SearchSongItem(song) {
-                                musicViewModel.playSong(song, searchResults)
-                            }
-                        }
-                        item { Spacer(Modifier.height(80.dp)) }
-                    }
-                }
-            } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
-                    item {
-                        Text("Descubre algo nuevo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            val suggestions = listOf(
-                                Pair("pop", "https://picsum.photos/seed/10/300/500"),
-                                Pair("rock", "https://picsum.photos/seed/11/300/500"),
-                                Pair("lofi", "https://picsum.photos/seed/12/300/500")
-                            )
-                            items(suggestions) { (term, url) ->
-                                DiscoveryCard(
-                                    title = "#$term",
-                                    imageUrl = url,
-                                    onClick = {
-                                        searchQuery = term
-                                        musicViewModel.searchSongs(term)
-                                    }
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                        item {
+                            Text("Descubre algo nuevo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(12.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                val suggestions = listOf(
+                                    Pair("pop", "https://images.unsplash.com/photo-1514525253361-bee8718a74a2?w=500"),
+                                    Pair("rock", "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=500"),
+                                    Pair("lofi", "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=500")
                                 )
+                                items(suggestions) { (term, url) ->
+                                    DiscoveryCard(
+                                        title = "#$term",
+                                        imageUrl = url,
+                                        onClick = {
+                                            searchQuery = term
+                                            musicViewModel.searchSongs(term)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    item {
-                        Text("Explorar todo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        ExploreGrid(
-                            onSearch = { term ->
-                                searchQuery = term
-                                musicViewModel.searchSongs(term)
-                            }
-                        )
+                        item {
+                            Text("Explorar todo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(12.dp))
+                            ExploreGrid(
+                                onSearch = { term ->
+                                    searchQuery = term
+                                    musicViewModel.searchSongs(term)
+                                }
+                            )
+                        }
                     }
                 }
             }

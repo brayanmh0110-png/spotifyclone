@@ -2,6 +2,8 @@ package com.example.spotifyclone.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -31,8 +33,18 @@ fun WelcomeScreen(navController: NavHostController) {
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Bottom
+            verticalArrangement = Arrangement.Center
         ) {
+            // Logo Temporal (Simulando Spotify)
+            Icon(
+                imageVector = Icons.Default.GraphicEq,
+                contentDescription = "Logo",
+                tint = Color(0xFF1DB954),
+                modifier = Modifier.size(80.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Mensaje de bienvenida
             Text(
                 text = "Millones de canciones.\nGratis en Spotify.",
@@ -42,9 +54,15 @@ fun WelcomeScreen(navController: NavHostController) {
                 textAlign = TextAlign.Center,
                 lineHeight = 40.sp
             )
+        }
 
-            Spacer(modifier = Modifier.height(32.dp))
-
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Bottom
+        ) {
             // Botón de Registro Principal (Verde Spotify)
             Button(
                 onClick = { navController.navigate(Screen.Register.route) },

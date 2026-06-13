@@ -20,6 +20,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.AuthViewModel
@@ -37,6 +39,7 @@ fun PlayerScreen(
     authViewModel: AuthViewModel
 ) {
     // 1. Estados reactivos del reproductor
+    val context = LocalContext.current
     val cancionActual by musicViewModel.currentSong.collectAsState()
     val estaReproduciendo by musicViewModel.isPlaying.collectAsState()
     val posicionActual by musicViewModel.currentPosition.collectAsState()
@@ -83,7 +86,10 @@ fun PlayerScreen(
                         text = { Text("Agregar a la cola") },
                         leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
                         onClick = {
-                            cancionActual?.let { musicViewModel.agregarALaCola(it) }
+                            cancionActual?.let { 
+                                musicViewModel.agregarALaCola(it)
+                                Toast.makeText(context, "Agregado a la cola", Toast.LENGTH_SHORT).show()
+                            }
                             menuExpandido = false
                         }
                     )
@@ -118,7 +124,11 @@ fun PlayerScreen(
                 Text(cancionActual?.artist ?: "", color = Color.LightGray, fontSize = 18.sp)
             }
             IconButton(onClick = { 
-                cancionActual?.let { musicViewModel.toggleFavorite(estadoUsuario.uid, it.id) }
+                cancionActual?.let { 
+                    musicViewModel.toggleFavorite(estadoUsuario.uid, it.id)
+                    val msg = if (esFavorita) "Eliminado de favoritos" else "Agregado a favoritos"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                }
             }) {
                 Icon(
                     imageVector = if (esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -200,6 +210,7 @@ fun PlayerScreen(
                                     .clickable {
                                         cancionActual?.let {
                                             musicViewModel.agregarCancionAPlaylist(estadoUsuario.uid, playlist.id, it.id)
+                                            Toast.makeText(context, "Agregado a ${playlist.name}", Toast.LENGTH_SHORT).show()
                                         }
                                         cancionParaPlaylist = false
                                     }

@@ -17,7 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -65,91 +64,99 @@ fun HomeScreen(
         ) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
-            when (selectedFilter) {
-                "Todas" -> {
-                    item {
-                        Row(Modifier.fillMaxWidth()) {
-                            QuickAccessGridItem(
-                                title = "Tus me gustas",
-                                imageRes = R.drawable.corazon,
-                                modifier = Modifier.weight(1f),
-                                onClick = { navController.navigate(Screen.LikedSongs.route) }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            
-                            if (albums.isNotEmpty()) {
-                                val firstAlbum = albums.first()
+            if (songs.isEmpty() && albums.isEmpty()) {
+                item {
+                    Box(Modifier.fillParentMaxHeight(0.7f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = Color(0xFF1DB954))
+                    }
+                }
+            } else {
+                when (selectedFilter) {
+                    "Todas" -> {
+                        item {
+                            Row(Modifier.fillMaxWidth()) {
                                 QuickAccessGridItem(
-                                    title = firstAlbum.title,
-                                    imageUrl = firstAlbum.coverUrl,
+                                    title = "Tus me gustas",
+                                    imageRes = R.drawable.corazon,
                                     modifier = Modifier.weight(1f),
-                                    onClick = {
-                                        musicViewModel.seleccionarAlbum(firstAlbum)
-                                        navController.navigate(Screen.AlbumDetail.route)
-                                    }
+                                    onClick = { navController.navigate(Screen.LikedSongs.route) }
                                 )
+                                Spacer(Modifier.width(8.dp))
+                                
+                                if (albums.isNotEmpty()) {
+                                    val firstAlbum = albums.first()
+                                    QuickAccessGridItem(
+                                        title = firstAlbum.title,
+                                        imageUrl = firstAlbum.coverUrl,
+                                        modifier = Modifier.weight(1f),
+                                        onClick = {
+                                            musicViewModel.seleccionarAlbum(firstAlbum)
+                                            navController.navigate(Screen.AlbumDetail.route)
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    if (songs.isNotEmpty()) {
-                        item {
-                            SectionTitle("Recomendado para ti")
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                items(songs) { song ->
-                                    HorizontalSongCard(song = song) {
-                                        musicViewModel.playSong(song, songs)
+                        if (songs.isNotEmpty()) {
+                            item {
+                                SectionTitle("Recomendado para ti")
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    items(songs) { song ->
+                                        HorizontalSongCard(song = song) {
+                                            musicViewModel.playSong(song, songs)
+                                        }
                                     }
+                                }
+                            }
+                        }
+
+                        item {
+                            SectionTitle("Tus mixes")
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(albums) { album ->
+                                    HorizontalMixCard(
+                                        name = album.title, 
+                                        imageUrl = album.coverUrl,
+                                        onClick = {
+                                            musicViewModel.seleccionarAlbum(album)
+                                            navController.navigate(Screen.AlbumDetail.route)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        item {
+                            SectionTitle("Tus artistas favoritos")
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(artists) { artist ->
+                                    CircularArtistItem(
+                                        name = artist.name,
+                                        imageUrl = artist.imageUrl,
+                                        onClick = { navController.navigate(Screen.Library.route) }
+                                    )
                                 }
                             }
                         }
                     }
 
-                    item {
-                        SectionTitle("Tus mixes")
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(albums) { album ->
-                                HorizontalMixCard(
-                                    name = album.title, 
-                                    imageUrl = album.coverUrl,
-                                    onClick = {
-                                        musicViewModel.seleccionarAlbum(album)
-                                        navController.navigate(Screen.AlbumDetail.route)
-                                    }
-                                )
-                            }
+                    "Música" -> {
+                        item { SectionTitle("Últimos lanzamientos") }
+                        items(songs.take(5)) { song ->
+                            DetailedReleaseCard(
+                                song = song,
+                                onClick = { musicViewModel.playSong(song, songs) },
+                                onFavoriteClick = { musicViewModel.toggleFavorite(userState.uid, song.id) }
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
                         }
                     }
-                    
-                    item {
-                        SectionTitle("Tus artistas favoritos")
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                            items(artists) { artist ->
-                                CircularArtistItem(
-                                    name = artist.name,
-                                    imageUrl = artist.imageUrl,
-                                    onClick = { navController.navigate(Screen.Library.route) }
-                                )
-                            }
-                        }
-                    }
-                }
 
-                "Música" -> {
-                    item { SectionTitle("Últimos lanzamientos") }
-                    items(songs.take(5)) { song ->
-                        DetailedReleaseCard(
-                            song = song,
-                            onClick = { musicViewModel.playSong(song, songs) },
-                            onFavoriteClick = { musicViewModel.toggleFavorite(userState.uid, song.id) }
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
+                    "Podcasts" -> {
+                        item { SectionTitle("Episodios más recientes") }
+                        item { EmptyPodcastsView() }
                     }
-                }
-
-                "Podcasts" -> {
-                    item { SectionTitle("Episodios más recientes") }
-                    item { EmptyPodcastsView() }
                 }
             }
             
@@ -337,10 +344,25 @@ fun CircularArtistItem(name: String, imageUrl: String, onClick: () -> Unit = {})
 
 @Composable
 fun EmptyPodcastsView() {
-    Column(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(Icons.Default.Podcasts, null, tint = Color.Gray, modifier = Modifier.size(60.dp))
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 48.dp), 
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.size(80.dp).clip(CircleShape).background(Color(0xFF282828)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Default.Podcasts, null, tint = Color(0xFF1DB954), modifier = Modifier.size(40.dp))
+        }
         Spacer(Modifier.height(16.dp))
-        Text("Todavía no sigues ningún podcast", color = Color.White, fontWeight = FontWeight.Bold)
-        Text("Sigue tus programas favoritos para verlos aquí.", color = Color.Gray, fontSize = 13.sp)
+        Text("Todavía no sigues ningún podcast", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Text("Busca tus programas favoritos y dale a 'Seguir'.", color = Color.Gray, fontSize = 13.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(24.dp))
+        Button(
+            onClick = { /* Navegar a búsqueda o categoría podcasts */ },
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White)
+        ) {
+            Text("Explorar podcasts", color = Color.Black, fontWeight = FontWeight.Bold)
+        }
     }
 }

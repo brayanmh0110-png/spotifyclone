@@ -2,6 +2,8 @@ package com.example.spotifyclone.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
@@ -50,7 +52,9 @@ fun SpotifyNavHost(
     NavHost(
         navController = navController,
         startDestination = Screen.Welcome.route,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = { fadeIn(animationSpec = tween(300)) },
+        exitTransition = { fadeOut(animationSpec = tween(300)) }
     ) {
         // --- FLUJO DE BIENVENIDA Y AUTENTICACIÓN ---
         
@@ -61,7 +65,10 @@ fun SpotifyNavHost(
         composable(
             route = Screen.Register.route,
             enterTransition = {
-                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
             }
         ) {
             RegisterScreen(
@@ -74,12 +81,23 @@ fun SpotifyNavHost(
             route = Screen.LoginOptions.route,
             enterTransition = {
                 slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
             }
         ) {
             LoginOptionsScreen(navController = navController)
         }
         
-        composable(Screen.LoginEmail.route) {
+        composable(
+            Screen.LoginEmail.route,
+            enterTransition = {
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
+            }
+        ) {
             LoginEmailScreen(
                 navController = navController, 
                 authViewModel = authViewModel
@@ -88,7 +106,11 @@ fun SpotifyNavHost(
         
         // --- PANTALLAS PRINCIPALES (POST-LOGIN) ---
         
-        composable(Screen.Home.route) {
+        composable(
+            Screen.Home.route,
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(300)) }
+        ) {
             HomeScreen(
                 navController = navController, 
                 musicViewModel = musicViewModel, 
@@ -96,7 +118,15 @@ fun SpotifyNavHost(
             )
         }
         
-        composable(Screen.AlbumDetail.route) {
+        composable(
+            Screen.AlbumDetail.route,
+            enterTransition = {
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Up, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Down, animationSpec = tween(500))
+            }
+        ) {
             AlbumDetailScreen(
                 navController = navController,
                 musicViewModel = musicViewModel,
@@ -115,7 +145,15 @@ fun SpotifyNavHost(
             )
         }
         
-        composable(Screen.LikedSongs.route) {
+        composable(
+            Screen.LikedSongs.route,
+            enterTransition = {
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
+            }
+        ) {
             LikedSongsScreen(
                 navController = navController, 
                 authViewModel = authViewModel, 
@@ -123,7 +161,11 @@ fun SpotifyNavHost(
             )
         }
 
-        composable(Screen.Library.route) {
+        composable(
+            Screen.Library.route,
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(300)) }
+        ) {
             LibraryScreen(
                 navController = navController,
                 musicViewModel = musicViewModel,
@@ -139,7 +181,15 @@ fun SpotifyNavHost(
             )
         }
 
-        composable(Screen.PlaylistDetail.route) { backStackEntry ->
+        composable(
+            Screen.PlaylistDetail.route,
+            enterTransition = {
+                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
+            },
+            exitTransition = {
+                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
+            }
+        ) { backStackEntry ->
             val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
             PlaylistScreen(
                 playlistId = playlistId,
@@ -149,7 +199,11 @@ fun SpotifyNavHost(
             )
         }
 
-        composable(Screen.Search.route) {
+        composable(
+            Screen.Search.route,
+            enterTransition = { fadeIn(tween(300)) },
+            exitTransition = { fadeOut(tween(300)) }
+        ) {
             SearchScreen(
                 navController = navController, 
                 musicViewModel = musicViewModel

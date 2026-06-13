@@ -334,8 +334,17 @@ private fun PlaylistsTab(
     onDeletePlaylist: (Playlist) -> Unit
 ) {
     if (playlists.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No tienes playlists aún.", color = Color.Gray)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Default.LibraryMusic, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+            Spacer(Modifier.height(16.dp))
+            Text("Crea tu primera playlist", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("Es muy fácil, te ayudaremos.", color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(24.dp))
+            // El FAB ya está para crear, pero podemos poner un texto informativo
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
