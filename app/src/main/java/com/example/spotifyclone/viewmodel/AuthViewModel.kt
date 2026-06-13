@@ -126,6 +126,24 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Elimina permanentemente la cuenta del usuario.
+     */
+    fun deleteAccount() {
+        val uid = _userState.value.uid
+        if (uid.isEmpty()) return
+
+        viewModelScope.launch {
+            val result = authRepository.deleteAccount(uid)
+            if (result.isSuccess) {
+                userPrefs.clearUserSession()
+                _isLoggedIn.value = false
+            } else {
+                _error.value = "No se pudo eliminar la cuenta. Inténtalo de nuevo más tarde."
+            }
+        }
+    }
+
     fun updateProfilePicture(uriString: String) {
         val uid = _userState.value.uid
         if (uid.isEmpty()) return
@@ -155,6 +173,23 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 e.printStackTrace()
                 _error.value = "Error al procesar la imagen"
+            }
+        }
+    }
+
+    /**
+     * Actualiza el nombre del usuario en Firestore y en el estado local.
+     */
+    fun updateName(newName: String) {
+        val uid = _userState.value.uid
+        if (uid.isEmpty() || newName.isBlank()) return
+
+        viewModelScope.launch {
+            val result = authRepository.updateUserName(uid, newName.trim())
+            if (result.isSuccess) {
+                _userState.value = _userState.value.copy(name = newName.trim())
+            } else {
+                _error.value = "Error al actualizar el nombre"
             }
         }
     }

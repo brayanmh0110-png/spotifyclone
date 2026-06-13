@@ -28,53 +28,49 @@ import com.example.spotifyclone.model.Song
 
 /**
  * SearchScreen: Pantalla de búsqueda y descubrimiento.
- * Permite buscar canciones reales y explorar categorías predefinidas.
  */
 @Composable
 fun SearchScreen(
-    controladorNavegacion: NavHostController,
-    vistaModeloMusica: MusicViewModel
+    navController: NavHostController,
+    musicViewModel: MusicViewModel
 ) {
-    // Estados reactivos para la búsqueda
-    var textoBusqueda by remember { mutableStateOf("") }
-    val resultadosBusqueda by vistaModeloMusica.searchResults.collectAsState()
-    val estaBuscando by vistaModeloMusica.isSearching.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
+    val searchResults by musicViewModel.searchResults.collectAsState()
+    val isSearching by musicViewModel.isSearching.collectAsState()
 
     Scaffold(
         containerColor = Color.Black
-    ) { rellenos ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(rellenos)
+                .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Cabecera: Botón de volver y Título
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(vertical = 16.dp)
             ) {
-                IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                IconButton(onClick = { navController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
                 }
                 Text("Buscar", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
 
-            // --- COMPONENTE: BARRA DE BÚSQUEDA ---
             TextField(
-                value = textoBusqueda,
+                value = searchQuery,
                 onValueChange = { 
-                    textoBusqueda = it
-                    vistaModeloMusica.searchSongs(it) // Dispara la búsqueda en la API
+                    searchQuery = it
+                    musicViewModel.searchSongs(it)
                 },
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)),
                 placeholder = { Text("¿Qué quieres escuchar?", color = Color.Gray) },
                 leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Black) },
                 trailingIcon = {
-                    if (textoBusqueda.isNotEmpty()) {
+                    if (searchQuery.isNotEmpty()) {
                         IconButton(onClick = { 
-                            textoBusqueda = "" 
-                            vistaModeloMusica.searchSongs("") // Limpia resultados
+                            searchQuery = "" 
+                            musicViewModel.searchSongs("")
                         }) {
                             Icon(Icons.Default.Close, null, tint = Color.Black)
                         }
@@ -93,40 +89,48 @@ fun SearchScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lógica de visualización de resultados
-            if (estaBuscando) {
-                // Indicador de carga mientras la API responde
+            if (isSearching) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(color = Color(0xFF1DB954))
                 }
-            } else if (textoBusqueda.isNotEmpty()) {
-                // Lista de canciones encontradas
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(resultadosBusqueda) { cancion ->
-                        ItemCancionBusqueda(cancion) {
-                            vistaModeloMusica.playSong(cancion, resultadosBusqueda)
+            } else if (searchQuery.isNotEmpty()) {
+                if (searchResults.isEmpty()) {
+                    Box(Modifier.fillMaxSize().padding(top = 100.dp), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Search, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text("No se encontraron resultados", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Asegúrate de que todo esté bien escrito.", color = Color.Gray, fontSize = 14.sp)
                         }
+                    }
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        items(searchResults) { song ->
+                            SearchSongItem(song) {
+                                musicViewModel.playSong(song, searchResults)
+                            }
+                        }
+                        item { Spacer(Modifier.height(80.dp)) }
                     }
                 }
             } else {
-                // SECCIÓN: Exploración (cuando no hay búsqueda activa)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(24.dp)) {
                     item {
                         Text("Descubre algo nuevo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            val sugerencias = listOf(
+                            val suggestions = listOf(
                                 Pair("pop", "https://picsum.photos/seed/10/300/500"),
                                 Pair("rock", "https://picsum.photos/seed/11/300/500"),
                                 Pair("lofi", "https://picsum.photos/seed/12/300/500")
                             )
-                            items(sugerencias) { (termino, url) ->
-                                TarjetaSugerenciaVertical(
-                                    titulo = "#$termino",
-                                    urlImagen = url,
-                                    alPulsar = {
-                                        textoBusqueda = termino
-                                        vistaModeloMusica.searchSongs(termino)
+                            items(suggestions) { (term, url) ->
+                                DiscoveryCard(
+                                    title = "#$term",
+                                    imageUrl = url,
+                                    onClick = {
+                                        searchQuery = term
+                                        musicViewModel.searchSongs(term)
                                     }
                                 )
                             }
@@ -136,10 +140,10 @@ fun SearchScreen(
                     item {
                         Text("Explorar todo", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(12.dp))
-                        CuadriculaExplorar(
-                            alBuscar = { termino ->
-                                textoBusqueda = termino
-                                vistaModeloMusica.searchSongs(termino)
+                        ExploreGrid(
+                            onSearch = { term ->
+                                searchQuery = term
+                                musicViewModel.searchSongs(term)
                             }
                         )
                     }
@@ -149,34 +153,32 @@ fun SearchScreen(
     }
 }
 
-// --- SUB-COMPONENTES ---
-
 @Composable
-fun ItemCancionBusqueda(cancion: Song, alPulsar: () -> Unit) {
+fun SearchSongItem(song: Song, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable { alPulsar() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = cancion.coverUrl,
+            model = song.coverUrl,
             contentDescription = null,
             modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)),
             contentScale = ContentScale.Crop
         )
         Spacer(Modifier.width(12.dp))
         Column {
-            Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-            Text(cancion.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+            Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Text(song.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
     }
 }
 
 @Composable
-fun TarjetaSugerenciaVertical(titulo: String, urlImagen: String, alPulsar: () -> Unit = {}) {
-    Box(modifier = Modifier.width(140.dp).height(200.dp).clip(RoundedCornerShape(8.dp)).clickable { alPulsar() }) {
-        AsyncImage(urlImagen, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+fun DiscoveryCard(title: String, imageUrl: String, onClick: () -> Unit = {}) {
+    Box(modifier = Modifier.width(140.dp).height(200.dp).clip(RoundedCornerShape(8.dp)).clickable { onClick() }) {
+        AsyncImage(imageUrl, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Text(
-            text = titulo,
+            text = title,
             color = Color.White,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
@@ -186,8 +188,8 @@ fun TarjetaSugerenciaVertical(titulo: String, urlImagen: String, alPulsar: () ->
 }
 
 @Composable
-fun CuadriculaExplorar(alBuscar: (String) -> Unit = {}) {
-    val categorias = listOf(
+fun ExploreGrid(onSearch: (String) -> Unit = {}) {
+    val categories = listOf(
         Pair("Música", Color(0xFFE13300)),
         Pair("Podcasts", Color(0xFF1E3264)),
         Pair("En vivo", Color(0xFF8D67AB)),
@@ -195,14 +197,14 @@ fun CuadriculaExplorar(alBuscar: (String) -> Unit = {}) {
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        categorias.chunked(2).forEach { fila ->
+        categories.chunked(2).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                fila.forEach { (nombre, color) ->
-                    TarjetaCategoria(
-                        nombre = nombre,
+                row.forEach { (name, color) ->
+                    CategoryCard(
+                        name = name,
                         color = color,
                         modifier = Modifier.weight(1f),
-                        alPulsar = { alBuscar(nombre) }
+                        onClick = { onSearch(name) }
                     )
                 }
             }
@@ -211,15 +213,15 @@ fun CuadriculaExplorar(alBuscar: (String) -> Unit = {}) {
 }
 
 @Composable
-fun TarjetaCategoria(nombre: String, color: Color, modifier: Modifier = Modifier, alPulsar: () -> Unit = {}) {
+fun CategoryCard(name: String, color: Color, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     Box(
         modifier = modifier
             .height(90.dp)
             .clip(RoundedCornerShape(4.dp))
             .background(color)
-            .clickable { alPulsar() }
+            .clickable { onClick() }
             .padding(8.dp)
     ) {
-        Text(nombre, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(name, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
     }
 }

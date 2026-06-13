@@ -20,18 +20,16 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
  * CrearPlaylistScreen: Pantalla para ponerle nombre a una nueva playlist.
- * Muestra el texto "Ponle un nombre a tu playlist", un campo para escribir
- * y el botón "Crear". Al crear, abre directamente la pantalla de la playlist.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearPlaylistScreen(
-    controladorNavegacion: NavHostController,
-    vistaModeloMusica: MusicViewModel,
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController,
+    musicViewModel: MusicViewModel,
+    authViewModel: AuthViewModel
 ) {
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
-    var nombrePlaylist by remember { mutableStateOf("") }
+    val userState by authViewModel.userState.collectAsState()
+    var playlistName by remember { mutableStateOf("") }
 
     Scaffold(
         containerColor = Color.Black,
@@ -41,18 +39,18 @@ fun CrearPlaylistScreen(
                     Text("Crear playlist", color = Color.White, fontWeight = FontWeight.Bold)
                 },
                 navigationIcon = {
-                    IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.Close, "Cerrar", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
         }
-    ) { rellenos ->
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(rellenos)
+                .padding(padding)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -68,10 +66,9 @@ fun CrearPlaylistScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Campo donde el usuario escribe el nombre
             OutlinedTextField(
-                value = nombrePlaylist,
-                onValueChange = { nombrePlaylist = it },
+                value = playlistName,
+                onValueChange = { playlistName = it },
                 placeholder = { Text("Mi playlist", color = Color.Gray) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -87,24 +84,22 @@ fun CrearPlaylistScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // Botón Crear: solo se activa si hay un nombre escrito
             Button(
                 onClick = {
-                    if (nombrePlaylist.isNotBlank()) {
-                        vistaModeloMusica.crearPlaylist(
-                            estadoUsuario.uid,
-                            nombrePlaylist.trim()
-                        ) { nuevoId ->
-                            // Reemplazamos esta pantalla por la de la playlist creada
-                            controladorNavegacion.navigate(
-                                Screen.PlaylistDetail.crearRuta(nuevoId)
+                    if (playlistName.isNotBlank()) {
+                        musicViewModel.crearPlaylist(
+                            userState.uid,
+                            playlistName.trim()
+                        ) { newId ->
+                            navController.navigate(
+                                Screen.PlaylistDetail.crearRuta(newId)
                             ) {
                                 popUpTo(Screen.CreatePlaylist.route) { inclusive = true }
                             }
                         }
                     }
                 },
-                enabled = nombrePlaylist.isNotBlank(),
+                enabled = playlistName.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),

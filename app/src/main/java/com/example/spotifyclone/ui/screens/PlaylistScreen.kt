@@ -28,32 +28,28 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
  * PlaylistScreen: Muestra las canciones de una playlist y permite reproducirlas o quitarlas.
- * El parámetro playlistId identifica cuál playlist mostrar.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistScreen(
     playlistId: String,
-    controladorNavegacion: NavHostController,
-    vistaModeloMusica: MusicViewModel,
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController,
+    musicViewModel: MusicViewModel,
+    authViewModel: AuthViewModel
 ) {
-    val listaPlaylists by vistaModeloMusica.playlists.collectAsState()
-    val listaCanciones by vistaModeloMusica.songs.collectAsState()
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    val playlists by musicViewModel.playlists.collectAsState()
+    val songs by musicViewModel.songs.collectAsState()
+    val userState by authViewModel.userState.collectAsState()
 
-    // Nos aseguramos de tener cargadas las playlists del usuario al abrir la pantalla
-    LaunchedEffect(estadoUsuario.uid) {
-        if (estadoUsuario.uid.isNotEmpty()) {
-            vistaModeloMusica.cargarPlaylists(estadoUsuario.uid)
+    LaunchedEffect(userState.uid) {
+        if (userState.uid.isNotEmpty()) {
+            musicViewModel.cargarPlaylists(userState.uid)
         }
     }
 
-    val playlist = listaPlaylists.find { it.id == playlistId }
-    val cancionesDePlaylist = listaCanciones.filter { playlist?.songsIds?.contains(it.id) == true }
-
-    // Canciones que aún no están en la playlist: se ofrecen como recomendaciones
-    val cancionesRecomendadas = listaCanciones.filter { playlist?.songsIds?.contains(it.id) != true }
+    val playlist = playlists.find { it.id == playlistId }
+    val playlistSongs = songs.filter { playlist?.songsIds?.contains(it.id) == true }
+    val recommendedSongs = songs.filter { playlist?.songsIds?.contains(it.id) != true }
 
     Scaffold(
         containerColor = Color.Black,
@@ -67,20 +63,19 @@ fun PlaylistScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
             )
         }
-    ) { rellenos ->
+    ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(rellenos)
+                .padding(padding)
         ) {
-            // Cabecera con ícono genérico y botón para reproducir todo
             item {
                 Column(
                     modifier = Modifier
@@ -105,7 +100,7 @@ fun PlaylistScreen(
 
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        "${cancionesDePlaylist.size} canciones",
+                        "${playlistSongs.size} canciones",
                         color = Color.Gray,
                         fontSize = 14.sp
                     )
@@ -113,11 +108,11 @@ fun PlaylistScreen(
 
                     Button(
                         onClick = {
-                            cancionesDePlaylist.firstOrNull()?.let {
-                                vistaModeloMusica.playSong(it, cancionesDePlaylist)
+                            playlistSongs.firstOrNull()?.let {
+                                musicViewModel.playSong(it, playlistSongs)
                             }
                         },
-                        enabled = cancionesDePlaylist.isNotEmpty(),
+                        enabled = playlistSongs.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954))
                     ) {
                         Icon(Icons.Default.PlayArrow, null, tint = Color.Black)
@@ -127,8 +122,7 @@ fun PlaylistScreen(
                 }
             }
 
-            // Estado vacío
-            if (cancionesDePlaylist.isEmpty()) {
+            if (playlistSongs.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
@@ -137,7 +131,7 @@ fun PlaylistScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Esta playlist está vacía.\nAgrega canciones desde las recomendaciones de abajo.",
+                            text = "Esta playlist está vacía.",
                             color = Color.Gray,
                             textAlign = TextAlign.Center,
                             fontSize = 14.sp
@@ -145,25 +139,20 @@ fun PlaylistScreen(
                     }
                 }
             } else {
-                items(cancionesDePlaylist) { cancion ->
-                    ItemCancionEnPlaylist(
-                        cancion = cancion,
-                        alPulsar = { vistaModeloMusica.playSong(cancion, cancionesDePlaylist) },
-                        alEliminar = {
+                items(playlistSongs) { song ->
+                    PlaylistItem(
+                        song = song,
+                        onPlay = { musicViewModel.playSong(song, playlistSongs) },
+                        onRemove = {
                             playlist?.let {
-                                vistaModeloMusica.quitarCancionDePlaylist(
-                                    estadoUsuario.uid,
-                                    it.id,
-                                    cancion.id
-                                )
+                                musicViewModel.quitarCancionDePlaylist(userState.uid, it.id, song.id)
                             }
                         }
                     )
                 }
             }
 
-            // --- Sección: canciones recomendadas para agregar a esta playlist ---
-            if (cancionesRecomendadas.isNotEmpty()) {
+            if (recommendedSongs.isNotEmpty()) {
                 item {
                     Text(
                         text = "Te recomendamos",
@@ -173,17 +162,13 @@ fun PlaylistScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
                     )
                 }
-                items(cancionesRecomendadas) { cancion ->
-                    ItemCancionRecomendada(
-                        cancion = cancion,
-                        alPulsar = { vistaModeloMusica.playSong(cancion, cancionesRecomendadas) },
-                        alAgregar = {
+                items(recommendedSongs) { song ->
+                    RecommendedItem(
+                        song = song,
+                        onPlay = { musicViewModel.playSong(song, recommendedSongs) },
+                        onAdd = {
                             playlist?.let {
-                                vistaModeloMusica.agregarCancionAPlaylist(
-                                    estadoUsuario.uid,
-                                    it.id,
-                                    cancion.id
-                                )
+                                musicViewModel.agregarCancionAPlaylist(userState.uid, it.id, song.id)
                             }
                         }
                     )
@@ -195,95 +180,48 @@ fun PlaylistScreen(
     }
 }
 
-/**
- * Fila individual de una canción dentro de una playlist.
- * El botón rojo quita la canción de la playlist sin borrarla del sistema.
- */
 @Composable
-private fun ItemCancionEnPlaylist(
-    cancion: Song,
-    alPulsar: () -> Unit,
-    alEliminar: () -> Unit
-) {
+private fun PlaylistItem(song: Song, onPlay: () -> Unit, onRemove: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { alPulsar() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onPlay() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = cancion.coverUrl,
+            model = song.coverUrl,
             contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(4.dp)),
+            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)),
             contentScale = ContentScale.Crop
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                cancion.title,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
-            Text(cancion.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+            Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Text(song.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
-        // Botón para quitar la canción de esta playlist
-        IconButton(onClick = { alEliminar() }) {
-            Icon(
-                imageVector = Icons.Default.RemoveCircleOutline,
-                contentDescription = "Quitar de playlist",
-                tint = Color.Gray
-            )
+        IconButton(onClick = { onRemove() }) {
+            Icon(imageVector = Icons.Default.RemoveCircleOutline, contentDescription = null, tint = Color.Gray)
         }
     }
 }
 
-/**
- * Fila de una canción recomendada. El botón "+" la agrega a la playlist actual.
- */
 @Composable
-private fun ItemCancionRecomendada(
-    cancion: Song,
-    alPulsar: () -> Unit,
-    alAgregar: () -> Unit
-) {
+private fun RecommendedItem(song: Song, onPlay: () -> Unit, onAdd: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { alPulsar() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onPlay() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = cancion.coverUrl,
+            model = song.coverUrl,
             contentDescription = null,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(4.dp)),
+            modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)),
             contentScale = ContentScale.Crop
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                cancion.title,
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
-            )
-            Text(cancion.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+            Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Text(song.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
-        // Botón para agregar la canción a esta playlist
-        IconButton(onClick = { alAgregar() }) {
-            Icon(
-                imageVector = Icons.Default.AddCircleOutline,
-                contentDescription = "Agregar a la playlist",
-                tint = Color(0xFF1DB954)
-            )
+        IconButton(onClick = { onAdd() }) {
+            Icon(imageVector = Icons.Default.AddCircleOutline, contentDescription = null, tint = Color(0xFF1DB954))
         }
     }
 }

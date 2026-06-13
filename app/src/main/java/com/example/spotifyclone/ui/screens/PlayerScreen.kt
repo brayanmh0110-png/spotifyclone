@@ -32,27 +32,27 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
  */
 @Composable
 fun PlayerScreen(
-    controladorNavegacion: NavHostController,
-    vistaModeloMusica: MusicViewModel,
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController,
+    musicViewModel: MusicViewModel,
+    authViewModel: AuthViewModel
 ) {
     // 1. Estados reactivos del reproductor
-    val cancionActual by vistaModeloMusica.currentSong.collectAsState()
-    val estaReproduciendo by vistaModeloMusica.isPlaying.collectAsState()
-    val posicionActual by vistaModeloMusica.currentPosition.collectAsState()
-    val duracionTotal by vistaModeloMusica.duration.collectAsState()
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
-    val listaFavoritos by vistaModeloMusica.favorites.collectAsState()
-    val esModoAleatorio by vistaModeloMusica.esModoAleatorio.collectAsState()
-    val modoRepeticion by vistaModeloMusica.modoRepeticion.collectAsState()
-    val listaPlaylists by vistaModeloMusica.playlists.collectAsState()
+    val cancionActual by musicViewModel.currentSong.collectAsState()
+    val estaReproduciendo by musicViewModel.isPlaying.collectAsState()
+    val posicionActual by musicViewModel.currentPosition.collectAsState()
+    val duracionTotal by musicViewModel.duration.collectAsState()
+    val estadoUsuario by authViewModel.userState.collectAsState()
+    val listaFavoritos by musicViewModel.favorites.collectAsState()
+    val esModoAleatorio by musicViewModel.esModoAleatorio.collectAsState()
+    val modoRepeticion by musicViewModel.modoRepeticion.collectAsState()
+    val listaPlaylists by musicViewModel.playlists.collectAsState()
 
     var menuExpandido by remember { mutableStateOf(false) }
     var cancionParaPlaylist by remember { mutableStateOf(false) }
 
     LaunchedEffect(estadoUsuario.uid) {
         if (estadoUsuario.uid.isNotEmpty()) {
-            vistaModeloMusica.cargarPlaylists(estadoUsuario.uid)
+            musicViewModel.cargarPlaylists(estadoUsuario.uid)
         }
     }
 
@@ -70,7 +70,7 @@ fun PlayerScreen(
     ) {
         // Cabecera: Botón de bajar y Título de contexto
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+            IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Default.KeyboardArrowDown, "Cerrar", tint = Color.White, modifier = Modifier.size(32.dp))
             }
             Text("REPRODUCIENDO", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -83,7 +83,7 @@ fun PlayerScreen(
                         text = { Text("Agregar a la cola") },
                         leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
                         onClick = {
-                            cancionActual?.let { vistaModeloMusica.agregarALaCola(it) }
+                            cancionActual?.let { musicViewModel.agregarALaCola(it) }
                             menuExpandido = false
                         }
                     )
@@ -118,7 +118,7 @@ fun PlayerScreen(
                 Text(cancionActual?.artist ?: "", color = Color.LightGray, fontSize = 18.sp)
             }
             IconButton(onClick = { 
-                cancionActual?.let { vistaModeloMusica.toggleFavorite(estadoUsuario.uid, it.id) }
+                cancionActual?.let { musicViewModel.toggleFavorite(estadoUsuario.uid, it.id) }
             }) {
                 Icon(
                     imageVector = if (esFavorita) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
@@ -134,7 +134,7 @@ fun PlayerScreen(
         // --- BARRA DE PROGRESO (SLIDER) ---
         Slider(
             value = posicionActual,
-            onValueChange = { vistaModeloMusica.seekTo(it) },
+            onValueChange = { musicViewModel.seekTo(it) },
             valueRange = 0f..duracionTotal.coerceAtLeast(1f),
             colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White)
         )
@@ -148,7 +148,7 @@ fun PlayerScreen(
         // --- CONTROLES DE REPRODUCCIÓN ---
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
             // Botón Aleatorio: verde cuando está activo
-            IconButton(onClick = { vistaModeloMusica.alternarAleatorio() }) {
+            IconButton(onClick = { musicViewModel.alternarAleatorio() }) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,
                     contentDescription = "Aleatorio",
@@ -156,24 +156,24 @@ fun PlayerScreen(
                 )
             }
 
-            IconButton(onClick = { vistaModeloMusica.playPreviousSong() }) {
+            IconButton(onClick = { musicViewModel.playPreviousSong() }) {
                 Icon(Icons.Default.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
             }
 
             // Botón central de Play/Pause
             Box(
-                modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White).clickable { vistaModeloMusica.togglePlayPause() },
+                modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White).clickable { musicViewModel.togglePlayPause() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(if (estaReproduciendo) Icons.Default.Pause else Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(40.dp))
             }
 
-            IconButton(onClick = { vistaModeloMusica.playNextSong() }) {
+            IconButton(onClick = { musicViewModel.playNextSong() }) {
                 Icon(Icons.Default.SkipNext, "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
             }
 
             // Botón Repetir: verde y con ícono diferente según el modo activo
-            IconButton(onClick = { vistaModeloMusica.cambiarModoRepeticion() }) {
+            IconButton(onClick = { musicViewModel.cambiarModoRepeticion() }) {
                 Icon(
                     imageVector = if (modoRepeticion == ModoRepeticion.UNO) Icons.Default.RepeatOne else Icons.Default.Repeat,
                     contentDescription = "Repetir",
@@ -199,7 +199,7 @@ fun PlayerScreen(
                                     .fillMaxWidth()
                                     .clickable {
                                         cancionActual?.let {
-                                            vistaModeloMusica.agregarCancionAPlaylist(estadoUsuario.uid, playlist.id, it.id)
+                                            musicViewModel.agregarCancionAPlaylist(estadoUsuario.uid, playlist.id, it.id)
                                         }
                                         cancionParaPlaylist = false
                                     }

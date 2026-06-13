@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Configura la app para que ocupe toda la pantalla y fuerza iconos blancos en la barra de estado (Hora/Batería)
+        // Configura la app para que ocupe toda la pantalla y fuerza iconos blancos en la barra de estado
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
@@ -49,21 +49,17 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             SpotifycloneTheme {
-                // Herramientas esenciales para que la app funcione:
                 val context = LocalContext.current
-                val controladorNavegacion = rememberNavController()
-                val vistaModeloAutenticacion: AuthViewModel = viewModel()
-                val vistaModeloMusica: MusicViewModel = viewModel()
+                val navController = rememberNavController()
+                val authViewModel: AuthViewModel = viewModel()
+                val musicViewModel: MusicViewModel = viewModel()
 
-                // Estados que observamos en tiempo real:
-                val estaLogueado by vistaModeloAutenticacion.isLoggedIn.collectAsState()
-                val rutaActual by controladorNavegacion.currentBackStackEntryAsState()
+                val estaLogueado by authViewModel.isLoggedIn.collectAsState()
+                val rutaActual by navController.currentBackStackEntryAsState()
                 val nombreRuta = rutaActual?.destination?.route
 
-                // Estado para mostrar u ocultar el menú de "Crear" (+)
                 var mostrarMenuCrear by remember { mutableStateOf(false) }
 
-                // Lista de pantallas donde NO queremos mostrar controles de música (flujo de login)
                 val pantallasSinReproductor = listOf(
                     Screen.Welcome.route,
                     Screen.Register.route,
@@ -71,73 +67,63 @@ class MainActivity : ComponentActivity() {
                     Screen.LoginEmail.route
                 )
 
-                // Lógica de redirección automática: si cambia el estado del login, movemos al usuario
+                // Lógica de redirección según el login
                 LaunchedEffect(estaLogueado) {
                     if (estaLogueado == true) {
-                        controladorNavegacion.navigate(Screen.Home.route) {
-                            popUpTo(0) { inclusive = true } // Limpia el historial para no volver atrás
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(0) { inclusive = true }
                         }
                     } else if (estaLogueado == false) {
-                        // AQUÍ: Detenemos la música si el usuario cierra sesión
-                        vistaModeloMusica.stopMusic()
-                        
+                        musicViewModel.stopMusic()
                         if (nombreRuta !in pantallasSinReproductor) {
-                            controladorNavegacion.navigate(Screen.Welcome.route) {
+                            navController.navigate(Screen.Welcome.route) {
                                 popUpTo(0) { inclusive = true }
                             }
                         }
                     }
                 }
 
-                // Estructura visual principal
                 Box(modifier = Modifier.fillMaxSize()) {
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
-                        containerColor = Color.Black, // FONTO NEGRO PARA EVITAR BORDES BLANCOS
-                        // Barra inferior persistente (Bottom Bar)
+                        containerColor = Color.Black,
                         bottomBar = {
-                            // Solo se muestra si el usuario ya entró a la app principal
                             val mostrarBarrasGlobales = nombreRuta !in pantallasSinReproductor && 
                                                         nombreRuta != Screen.Player.route && 
                                                         nombreRuta != null
                             
                             if (mostrarBarrasGlobales) {
                                 Column(modifier = Modifier.background(Color.Black)) {
-                                    // Mini-reproductor que flota sobre el menú
                                     MiniPlayer(
-                                        musicViewModel = vistaModeloMusica,
-                                        navController = controladorNavegacion
+                                        musicViewModel = musicViewModel,
+                                        navController = navController
                                     )
-                                    // El menú de 5 botones (Inicio, Buscar, etc.)
                                     SpotifyBottomBar(
-                                        navController = controladorNavegacion,
+                                        navController = navController,
                                         onCreateClick = { mostrarMenuCrear = true }
                                     )
                                 }
                             }
                         }
                     ) { espaciosInternos ->
-                        // Contenedor de las pantallas (Home, Buscar, Biblioteca, etc.)
                         Box(modifier = Modifier.fillMaxSize().padding(espaciosInternos)) {
                             SpotifyNavHost(
-                                navController = controladorNavegacion,
-                                authViewModel = vistaModeloAutenticacion,
-                                musicViewModel = vistaModeloMusica
+                                navController = navController,
+                                authViewModel = authViewModel,
+                                musicViewModel = musicViewModel
                             )
                         }
                     }
 
-                    // CAPA DE SUPERPOSICIÓN: Menú de "Crear" (Solo aparece al pulsar el +)
+                    // CAPA DE SUPERPOSICIÓN: Menú de "Crear"
                     if (mostrarMenuCrear) {
-                        // 1. Fondo oscuro que bloquea el resto de la app
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(Color.Black.copy(alpha = 0.7f))
-                                .clickable { mostrarMenuCrear = false } // Cerrar al tocar fuera
+                                .clickable { mostrarMenuCrear = false }
                         )
 
-                        // 2. Tarjeta con opciones de creación (Playlist, Fusión, etc.)
                         Column(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -146,7 +132,6 @@ class MainActivity : ComponentActivity() {
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color(0xFF282828))
                                 .padding(20.dp)
-                                .clickable(enabled = false) { }
                         ) {
                             CreateOptionItem(
                                 icon = Icons.Default.MusicNote,
@@ -154,7 +139,7 @@ class MainActivity : ComponentActivity() {
                                 subtitle = "Crea una playlist con canciones o episodios",
                                 alPulsar = {
                                     mostrarMenuCrear = false
-                                    controladorNavegacion.navigate(Screen.CreatePlaylist.route)
+                                    navController.navigate(Screen.CreatePlaylist.route)
                                 }
                             )
                             CreateOptionItem(
@@ -169,7 +154,7 @@ class MainActivity : ComponentActivity() {
                             CreateOptionItem(
                                 icon = Icons.Default.AllInclusive,
                                 title = "Fusión",
-                                subtitle = "Combina los gustos de tus personas favoritas en una playlist",
+                                subtitle = "Combina los gustos de tus personas favoritas",
                                 alPulsar = {
                                     mostrarMenuCrear = false
                                     Toast.makeText(context, "Función Fusión próximamente", Toast.LENGTH_SHORT).show()
@@ -177,7 +162,6 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 3. Botón circular "X" para cerrar el menú
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
@@ -188,7 +172,7 @@ class MainActivity : ComponentActivity() {
                                 .clickable { mostrarMenuCrear = false },
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Close, contentDescription = "Cerrar", tint = Color.Black, modifier = Modifier.size(32.dp))
+                            Icon(Icons.Default.Close, null, tint = Color.Black, modifier = Modifier.size(32.dp))
                         }
                     }
                 }

@@ -34,7 +34,6 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
  * LibraryScreen: Biblioteca personal del usuario.
- * Organiza el contenido en 4 pestañas: Canciones, Álbumes, Artistas y Playlists.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,25 +42,24 @@ fun LibraryScreen(
     musicViewModel: MusicViewModel,
     authViewModel: AuthViewModel
 ) {
-    val listaCanciones by musicViewModel.songs.collectAsState()
-    val listaAlbumes by musicViewModel.albums.collectAsState()
-    val listaArtistas by musicViewModel.artists.collectAsState()
-    val listaPlaylists by musicViewModel.playlists.collectAsState()
-    val estadoUsuario by authViewModel.userState.collectAsState()
+    val songs by musicViewModel.songs.collectAsState()
+    val albums by musicViewModel.albums.collectAsState()
+    val artists by musicViewModel.artists.collectAsState()
+    val playlists by musicViewModel.playlists.collectAsState()
+    val userState by authViewModel.userState.collectAsState()
 
-    var tabSeleccionado by remember { mutableStateOf(0) }
-    var mostrarCrearPlaylist by remember { mutableStateOf(false) }
-    var nombreNuevaPlaylist by remember { mutableStateOf("") }
-    var cancionParaAgregarAPlaylist by remember { mutableStateOf<Song?>(null) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+    var songToAddtoPlaylist by remember { mutableStateOf<Song?>(null) }
 
-    // Cargamos las playlists del usuario cuando se conoce su UID
-    LaunchedEffect(estadoUsuario.uid) {
-        if (estadoUsuario.uid.isNotEmpty()) {
-            musicViewModel.cargarPlaylists(estadoUsuario.uid)
+    LaunchedEffect(userState.uid) {
+        if (userState.uid.isNotEmpty()) {
+            musicViewModel.cargarPlaylists(userState.uid)
         }
     }
 
-    val nombreTabs = listOf("Canciones", "Álbumes", "Artistas", "Playlists")
+    val tabNames = listOf("Canciones", "Álbumes", "Artistas", "Playlists")
 
     Scaffold(
         containerColor = Color.Black,
@@ -78,20 +76,19 @@ fun LibraryScreen(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
                 )
-                // Pestañas de navegación
                 TabRow(
-                    selectedTabIndex = tabSeleccionado,
+                    selectedTabIndex = selectedTabIndex,
                     containerColor = Color.Black,
                     contentColor = Color(0xFF1DB954)
                 ) {
-                    nombreTabs.forEachIndexed { indice, nombre ->
+                    tabNames.forEachIndexed { index, name ->
                         Tab(
-                            selected = tabSeleccionado == indice,
-                            onClick = { tabSeleccionado = indice },
+                            selected = selectedTabIndex == index,
+                            onClick = { selectedTabIndex = index },
                             text = {
                                 Text(
-                                    nombre,
-                                    color = if (tabSeleccionado == indice) Color.White else Color.Gray,
+                                    name,
+                                    color = if (selectedTabIndex == index) Color.White else Color.Gray,
                                     fontSize = 13.sp
                                 )
                             }
@@ -100,59 +97,57 @@ fun LibraryScreen(
                 }
             }
         },
-        // Botón flotante para crear playlist (solo aparece en la pestaña Playlists)
         floatingActionButton = {
-            if (tabSeleccionado == 3) {
+            if (selectedTabIndex == 3) {
                 FloatingActionButton(
-                    onClick = { mostrarCrearPlaylist = true },
+                    onClick = { showCreatePlaylistDialog = true },
                     containerColor = Color(0xFF1DB954)
                 ) {
                     Icon(Icons.Default.Add, "Crear playlist", tint = Color.Black)
                 }
             }
         }
-    ) { rellenos ->
-        Box(modifier = Modifier.padding(rellenos)) {
-            when (tabSeleccionado) {
-                0 -> TabCanciones(
-                    canciones = listaCanciones,
-                    vistaModelo = musicViewModel,
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            when (selectedTabIndex) {
+                0 -> SongsTab(
+                    songs = songs,
+                    musicViewModel = musicViewModel,
                     navController = navController,
-                    onAgregarAPlaylist = { cancionParaAgregarAPlaylist = it }
+                    onAddToPlaylist = { songToAddtoPlaylist = it }
                 )
-                1 -> TabAlbumes(
-                    albumes = listaAlbumes,
+                1 -> AlbumsTab(
+                    albums = albums,
                     onAlbumClick = { album ->
                         musicViewModel.seleccionarAlbum(album)
                         navController.navigate(Screen.AlbumDetail.route)
                     }
                 )
-                2 -> TabArtistas(artistas = listaArtistas)
-                3 -> TabPlaylists(
-                    playlists = listaPlaylists,
+                2 -> ArtistsTab(artists = artists)
+                3 -> PlaylistsTab(
+                    playlists = playlists,
                     onPlaylistClick = { playlist ->
                         navController.navigate(Screen.PlaylistDetail.crearRuta(playlist.id))
                     },
-                    onEliminarPlaylist = { playlist ->
-                        musicViewModel.eliminarPlaylist(estadoUsuario.uid, playlist.id)
+                    onDeletePlaylist = { playlist ->
+                        musicViewModel.eliminarPlaylist(userState.uid, playlist.id)
                     }
                 )
             }
         }
     }
 
-    // --- Diálogo: Crear nueva playlist ---
-    if (mostrarCrearPlaylist) {
+    if (showCreatePlaylistDialog) {
         AlertDialog(
             onDismissRequest = {
-                mostrarCrearPlaylist = false
-                nombreNuevaPlaylist = ""
+                showCreatePlaylistDialog = false
+                newPlaylistName = ""
             },
             title = { Text("Nueva playlist", color = Color.White) },
             text = {
                 OutlinedTextField(
-                    value = nombreNuevaPlaylist,
-                    onValueChange = { nombreNuevaPlaylist = it },
+                    value = newPlaylistName,
+                    onValueChange = { newPlaylistName = it },
                     label = { Text("Nombre de la playlist") },
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
@@ -164,10 +159,10 @@ fun LibraryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (nombreNuevaPlaylist.isNotBlank()) {
-                            musicViewModel.crearPlaylist(estadoUsuario.uid, nombreNuevaPlaylist.trim())
-                            mostrarCrearPlaylist = false
-                            nombreNuevaPlaylist = ""
+                        if (newPlaylistName.isNotBlank()) {
+                            musicViewModel.crearPlaylist(userState.uid, newPlaylistName.trim())
+                            showCreatePlaylistDialog = false
+                            newPlaylistName = ""
                         }
                     }
                 ) {
@@ -176,8 +171,8 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(onClick = {
-                    mostrarCrearPlaylist = false
-                    nombreNuevaPlaylist = ""
+                    showCreatePlaylistDialog = false
+                    newPlaylistName = ""
                 }) {
                     Text("Cancelar", color = Color.Gray)
                 }
@@ -186,31 +181,22 @@ fun LibraryScreen(
         )
     }
 
-    // --- Diálogo: Seleccionar playlist a la que agregar una canción ---
-    cancionParaAgregarAPlaylist?.let { cancion ->
+    songToAddtoPlaylist?.let { song ->
         AlertDialog(
-            onDismissRequest = { cancionParaAgregarAPlaylist = null },
+            onDismissRequest = { songToAddtoPlaylist = null },
             title = { Text("Agregar a playlist", color = Color.White) },
             text = {
-                if (listaPlaylists.isEmpty()) {
-                    Text(
-                        "No tienes playlists aún.\nVe a la pestaña Playlists y pulsa +.",
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    )
+                if (playlists.isEmpty()) {
+                    Text("No tienes playlists aún.", color = Color.Gray)
                 } else {
                     LazyColumn {
-                        items(listaPlaylists) { playlist ->
+                        items(playlists) { playlist ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        musicViewModel.agregarCancionAPlaylist(
-                                            estadoUsuario.uid,
-                                            playlist.id,
-                                            cancion.id
-                                        )
-                                        cancionParaAgregarAPlaylist = null
+                                        musicViewModel.agregarCancionAPlaylist(userState.uid, playlist.id, song.id)
+                                        songToAddtoPlaylist = null
                                     }
                                     .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -224,7 +210,7 @@ fun LibraryScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { cancionParaAgregarAPlaylist = null }) {
+                TextButton(onClick = { songToAddtoPlaylist = null }) {
                     Text("Cerrar", color = Color.Gray)
                 }
             },
@@ -233,17 +219,14 @@ fun LibraryScreen(
     }
 }
 
-// --- PESTAÑA: Canciones ---
-
 @Composable
-private fun TabCanciones(
-    canciones: List<Song>,
-    vistaModelo: MusicViewModel,
+private fun SongsTab(
+    songs: List<Song>,
+    musicViewModel: MusicViewModel,
     navController: NavHostController,
-    onAgregarAPlaylist: (Song) -> Unit
+    onAddToPlaylist: (Song) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
-        // Item especial: Tus me gustas
         item {
             Row(
                 modifier = Modifier
@@ -269,127 +252,90 @@ private fun TabCanciones(
             }
         }
 
-        item {
-            Text(
-                text = "${canciones.size} canciones",
-                color = Color.Gray,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
-        items(canciones) { cancion ->
-            ItemCancionBiblioteca(
-                cancion = cancion,
-                alPulsar = { vistaModelo.playSong(cancion, canciones) },
-                alAgregarACola = { vistaModelo.agregarALaCola(cancion) },
-                alAgregarAPlaylist = { onAgregarAPlaylist(cancion) }
+        items(songs) { song ->
+            LibrarySongItem(
+                song = song,
+                onPlay = { musicViewModel.playSong(song, songs) },
+                onAddToQueue = { musicViewModel.agregarALaCola(song) },
+                onAddToPlaylist = { onAddToPlaylist(song) }
             )
         }
         item { Spacer(modifier = Modifier.height(80.dp)) }
     }
 }
 
-// --- PESTAÑA: Álbumes ---
-
 @Composable
-private fun TabAlbumes(albumes: List<Album>, onAlbumClick: (Album) -> Unit) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Text(
-                "${albumes.size} álbumes",
-                color = Color.Gray,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+private fun AlbumsTab(albums: List<Album>, onAlbumClick: (Album) -> Unit) {
+    if (albums.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No hay álbumes disponibles", color = Color.Gray)
         }
-        items(albumes) { album ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onAlbumClick(album) }
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = album.coverUrl,
-                    contentDescription = null,
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(albums) { album ->
+                Row(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(16.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(album.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                    Text("Álbum • ${album.artist}", color = Color.Gray, fontSize = 14.sp, maxLines = 1)
-                }
-                Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
-            }
-        }
-        item { Spacer(Modifier.height(80.dp)) }
-    }
-}
-
-// --- PESTAÑA: Artistas ---
-
-@Composable
-private fun TabArtistas(artistas: List<Artist>) {
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        item {
-            Text(
-                "${artistas.size} artistas",
-                color = Color.Gray,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-        }
-        items(artistas) { artista ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AsyncImage(
-                    model = artista.imageUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(artista.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                    Text("Artista", color = Color.Gray, fontSize = 14.sp)
+                        .fillMaxWidth()
+                        .clickable { onAlbumClick(album) }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = album.coverUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp).clip(RoundedCornerShape(4.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(album.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                        Text("Álbum • ${album.artist}", color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+                    }
                 }
             }
         }
-        item { Spacer(Modifier.height(80.dp)) }
     }
 }
 
-// --- PESTAÑA: Playlists ---
+@Composable
+private fun ArtistsTab(artists: List<Artist>) {
+    if (artists.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No hay artistas disponibles", color = Color.Gray)
+        }
+    } else {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
+            items(artists) { artist ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AsyncImage(
+                        model = artist.imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(56.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(Modifier.width(16.dp))
+                    Column {
+                        Text(artist.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("Artista", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable
-private fun TabPlaylists(
+private fun PlaylistsTab(
     playlists: List<Playlist>, 
     onPlaylistClick: (Playlist) -> Unit,
-    onEliminarPlaylist: (Playlist) -> Unit
+    onDeletePlaylist: (Playlist) -> Unit
 ) {
     if (playlists.isEmpty()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(32.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "No tienes playlists aún.\nPulsa el botón + para crear una.",
-                color = Color.Gray,
-                textAlign = TextAlign.Center,
-                fontSize = 14.sp
-            )
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("No tienes playlists aún.", color = Color.Gray)
         }
     } else {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -402,10 +348,7 @@ private fun TabPlaylists(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF282828)),
+                        modifier = Modifier.size(56.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFF282828)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(Icons.Default.QueueMusic, null, tint = Color(0xFF1DB954), modifier = Modifier.size(32.dp))
@@ -415,93 +358,78 @@ private fun TabPlaylists(
                         Text(playlist.name, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                         Text("${playlist.songsIds.size} canciones", color = Color.Gray, fontSize = 14.sp)
                     }
-                    
-                    // Menú para eliminar playlist
-                    var menuPlaylist by remember { mutableStateOf(false) }
+                    var showMenu by remember { mutableStateOf(false) }
                     Box {
-                        IconButton(onClick = { menuPlaylist = true }) {
+                        IconButton(onClick = { showMenu = true }) {
                             Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
                         }
                         DropdownMenu(
-                            expanded = menuPlaylist,
-                            onDismissRequest = { menuPlaylist = false },
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false },
                             containerColor = Color(0xFF282828)
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Eliminar Playlist", color = Color.Red) },
                                 leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) },
                                 onClick = {
-                                    onEliminarPlaylist(playlist)
-                                    menuPlaylist = false
+                                    onDeletePlaylist(playlist)
+                                    showMenu = false
                                 }
                             )
                         }
                     }
                 }
             }
-            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
 
-// --- COMPONENTE REUTILIZABLE: Fila de canción con menú de opciones ---
-
 @Composable
-fun ItemCancionBiblioteca(
-    cancion: Song,
-    alPulsar: () -> Unit,
-    alAgregarACola: () -> Unit = {},
-    alAgregarAPlaylist: () -> Unit = {}
+fun LibrarySongItem(
+    song: Song,
+    onPlay: () -> Unit,
+    onAddToQueue: () -> Unit,
+    onAddToPlaylist: () -> Unit
 ) {
-    var menuExpandido by remember { mutableStateOf(false) }
-
+    var showMenu by remember { mutableStateOf(false) }
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { alPulsar() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onPlay() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = cancion.coverUrl,
+            model = song.coverUrl,
             contentDescription = null,
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(4.dp)),
+            modifier = Modifier.size(56.dp).clip(RoundedCornerShape(4.dp)),
             contentScale = ContentScale.Crop
         )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
+        Spacer(Modifier.width(16.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-            Text("Canción • ${cancion.artist}", color = Color.Gray, fontSize = 14.sp, maxLines = 1)
+            Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            Text("Canción • ${song.artist}", color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
-
-        // Menú de opciones con DropdownMenu
         Box {
-            IconButton(onClick = { menuExpandido = true }) {
+            IconButton(onClick = { showMenu = true }) {
                 Icon(Icons.Default.MoreVert, "Opciones", tint = Color.Gray)
             }
             DropdownMenu(
-                expanded = menuExpandido,
-                onDismissRequest = { menuExpandido = false },
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false },
                 containerColor = Color(0xFF282828)
             ) {
                 DropdownMenuItem(
                     text = { Text("Agregar a la cola", color = Color.White) },
                     leadingIcon = { Icon(Icons.Default.QueueMusic, null, tint = Color.White) },
                     onClick = {
-                        alAgregarACola()
-                        menuExpandido = false
+                        onAddToQueue()
+                        showMenu = false
                     }
                 )
                 DropdownMenuItem(
                     text = { Text("Agregar a playlist", color = Color.White) },
                     leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color.White) },
                     onClick = {
-                        alAgregarAPlaylist()
-                        menuExpandido = false
+                        onAddToPlaylist()
+                        showMenu = false
                     }
                 )
             }

@@ -30,6 +30,7 @@ sealed class Screen(val route: String) {
     data object Library : Screen("library")
     data object CreatePlaylist : Screen("create_playlist")
     data object Search : Screen("search")
+    data object ActivityLog : Screen("activity_log")
     data object PlaylistDetail : Screen("playlist_detail/{playlistId}") {
         fun crearRuta(playlistId: String) = "playlist_detail/$playlistId"
     }
@@ -54,7 +55,7 @@ fun SpotifyNavHost(
         // --- FLUJO DE BIENVENIDA Y AUTENTICACIÓN ---
         
         composable(Screen.Welcome.route) {
-            WelcomeScreen(controladorNavegacion = navController)
+            WelcomeScreen(navController = navController)
         }
         
         composable(
@@ -64,8 +65,8 @@ fun SpotifyNavHost(
             }
         ) {
             RegisterScreen(
-                controladorNavegacion = navController, 
-                vistaModeloAutenticacion = authViewModel
+                navController = navController, 
+                authViewModel = authViewModel
             )
         }
         
@@ -80,8 +81,8 @@ fun SpotifyNavHost(
         
         composable(Screen.LoginEmail.route) {
             LoginEmailScreen(
-                controladorNavegacion = navController, 
-                vistaModeloAutenticacion = authViewModel
+                navController = navController, 
+                authViewModel = authViewModel
             )
         }
         
@@ -89,17 +90,17 @@ fun SpotifyNavHost(
         
         composable(Screen.Home.route) {
             HomeScreen(
-                controladorNavegacion = navController, 
-                vistaModeloMusica = musicViewModel, 
-                vistaModeloAutenticacion = authViewModel
+                navController = navController, 
+                musicViewModel = musicViewModel, 
+                authViewModel = authViewModel
             )
         }
         
         composable(Screen.AlbumDetail.route) {
             AlbumDetailScreen(
-                controladorNavegacion = navController,
-                vistaModeloMusica = musicViewModel,
-                vistaModeloAutenticacion = authViewModel
+                navController = navController,
+                musicViewModel = musicViewModel,
+                authViewModel = authViewModel
             )
         }
         
@@ -109,32 +110,32 @@ fun SpotifyNavHost(
             dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
             PanelUsuScreen(
-                controladorNavegacion = navController, 
-                vistaModeloAutenticacion = authViewModel
+                navController = navController, 
+                authViewModel = authViewModel
             )
         }
         
         composable(Screen.LikedSongs.route) {
             LikedSongsScreen(
-                controladorNavegacion = navController, 
-                vistaModeloAutenticacion = authViewModel, 
-                vistaModeloMusica = musicViewModel
+                navController = navController, 
+                authViewModel = authViewModel, 
+                musicViewModel = musicViewModel
             )
         }
 
         composable(Screen.Library.route) {
             LibraryScreen(
-                controladorNavegacion = navController,
-                vistaModeloMusica = musicViewModel,
-                vistaModeloAutenticacion = authViewModel
+                navController = navController,
+                musicViewModel = musicViewModel,
+                authViewModel = authViewModel
             )
         }
 
         composable(Screen.CreatePlaylist.route) {
             CrearPlaylistScreen(
-                controladorNavegacion = navController,
-                vistaModeloMusica = musicViewModel,
-                vistaModeloAutenticacion = authViewModel
+                navController = navController,
+                musicViewModel = musicViewModel,
+                authViewModel = authViewModel
             )
         }
 
@@ -142,16 +143,24 @@ fun SpotifyNavHost(
             val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
             PlaylistScreen(
                 playlistId = playlistId,
-                controladorNavegacion = navController,
-                vistaModeloMusica = musicViewModel,
-                vistaModeloAutenticacion = authViewModel
+                navController = navController,
+                musicViewModel = musicViewModel,
+                authViewModel = authViewModel
             )
         }
 
         composable(Screen.Search.route) {
             SearchScreen(
-                controladorNavegacion = navController, 
-                vistaModeloMusica = musicViewModel
+                navController = navController, 
+                musicViewModel = musicViewModel
+            )
+        }
+
+        composable(Screen.ActivityLog.route) {
+            ActivityLogScreen(
+                navController = navController,
+                musicViewModel = musicViewModel,
+                authViewModel = authViewModel
             )
         }
 
@@ -167,9 +176,9 @@ fun SpotifyNavHost(
             }
         ) {
             PlayerScreen(
-                controladorNavegacion = navController, 
-                vistaModeloMusica = musicViewModel, 
-                vistaModeloAutenticacion = authViewModel
+                navController = navController, 
+                musicViewModel = musicViewModel, 
+                authViewModel = authViewModel
             )
         }
     }

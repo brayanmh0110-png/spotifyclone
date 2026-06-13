@@ -76,6 +76,9 @@ class MusicViewModel : ViewModel() {
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
     val playlists: StateFlow<List<Playlist>> = _playlists.asStateFlow()
 
+    private val _activityLogs = MutableStateFlow<List<com.example.spotifyclone.model.ActivityLog>>(emptyList())
+    val activityLogs: StateFlow<List<com.example.spotifyclone.model.ActivityLog>> = _activityLogs.asStateFlow()
+
     // --- RF14: Álbum seleccionado actualmente ---
     private val _albumActual = MutableStateFlow<Album?>(null)
     val albumActual: StateFlow<Album?> = _albumActual.asStateFlow()
@@ -373,6 +376,15 @@ class MusicViewModel : ViewModel() {
     fun cargarPlaylists(userId: String) {
         viewModelScope.launch {
             repository.getPlaylists(userId).collect { _playlists.value = it }
+        }
+    }
+
+    /**
+     * Carga el historial de actividad del usuario.
+     */
+    fun cargarHistorial(userId: String) {
+        viewModelScope.launch {
+            repository.getActivityLogs(userId).collect { _activityLogs.value = it }
         }
     }
 

@@ -32,30 +32,27 @@ import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
  * AlbumDetailScreen: Pantalla que muestra el contenido de un álbum específico.
- * Ahora recibe AuthViewModel para poder agregar canciones a playlists.
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun AlbumDetailScreen(
-    controladorNavegacion: NavHostController,
-    vistaModeloMusica: MusicViewModel,
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController,
+    musicViewModel: MusicViewModel,
+    authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
-    val listaCancionesAlbum by vistaModeloMusica.albumSongs.collectAsState()
-    val albumActual by vistaModeloMusica.albumActual.collectAsState()
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
-    val listaPlaylists by vistaModeloMusica.playlists.collectAsState()
+    val albumSongs by musicViewModel.albumSongs.collectAsState()
+    val currentAlbum by musicViewModel.albumActual.collectAsState()
+    val userState by authViewModel.userState.collectAsState()
+    val playlists by musicViewModel.playlists.collectAsState()
 
-    val album = albumActual ?: Album(title = "Cargando...", artist = "...", coverUrl = "")
+    val album = currentAlbum ?: Album(title = "Cargando...", artist = "...", coverUrl = "")
 
-    // Canción seleccionada para agregar a playlist (null = diálogo cerrado)
-    var cancionParaPlaylist by remember { mutableStateOf<Song?>(null) }
+    var songToAddToPlaylist by remember { mutableStateOf<Song?>(null) }
 
-    // Cargamos las playlists del usuario si aún no se han cargado
-    LaunchedEffect(estadoUsuario.uid) {
-        if (estadoUsuario.uid.isNotEmpty()) {
-            vistaModeloMusica.cargarPlaylists(estadoUsuario.uid)
+    LaunchedEffect(userState.uid) {
+        if (userState.uid.isNotEmpty()) {
+            musicViewModel.cargarPlaylists(userState.uid)
         }
     }
 
@@ -65,74 +62,61 @@ fun AlbumDetailScreen(
             TopAppBar(
                 title = {},
                 navigationIcon = {
-                    IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                    IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
-    ) { rellenos ->
-        LazyColumn(modifier = Modifier.fillMaxSize().padding(rellenos)) {
-            item { CabeceraImagenAlbum(album.coverUrl) }
-            item { InformacionTextoAlbum(album) }
+    ) { padding ->
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+            item { AlbumHeaderImage(album.coverUrl) }
+            item { AlbumInfoSection(album) }
             item {
-                PanelAccionesAlbum(
-                    alReproducirTodo = {
-                        listaCancionesAlbum.firstOrNull()?.let {
-                            vistaModeloMusica.playSong(it, listaCancionesAlbum)
+                AlbumActionPanel(
+                    onPlayAll = {
+                        albumSongs.firstOrNull()?.let {
+                            musicViewModel.playSong(it, albumSongs)
                         }
                     },
-                    alAlternarAleatorio = {
-                        vistaModeloMusica.alternarAleatorio()
-                        listaCancionesAlbum.randomOrNull()?.let {
-                            vistaModeloMusica.playSong(it, listaCancionesAlbum)
+                    onShuffle = {
+                        musicViewModel.alternarAleatorio()
+                        albumSongs.randomOrNull()?.let {
+                            musicViewModel.playSong(it, albumSongs)
                         }
-                    },
-                    alAgregarABiblioteca = {
-                        Toast.makeText(context, "Álbum guardado en tu biblioteca", Toast.LENGTH_SHORT).show()
-                    },
-                    alDescargar = {
-                        Toast.makeText(context, "Descarga no disponible en esta versión", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
-            items(listaCancionesAlbum) { cancion ->
-                FilaCancionAlbum(
-                    cancion = cancion,
-                    alPulsar = { vistaModeloMusica.playSong(cancion, listaCancionesAlbum) },
-                    alAgregarACola = { vistaModeloMusica.agregarALaCola(cancion) },
-                    alAgregarAPlaylist = { cancionParaPlaylist = cancion }
+            items(albumSongs) { song ->
+                AlbumSongRow(
+                    song = song,
+                    onPlay = { musicViewModel.playSong(song, albumSongs) },
+                    onAddToQueue = { musicViewModel.agregarALaCola(song) },
+                    onAddToPlaylist = { songToAddToPlaylist = song }
                 )
             }
             item { Spacer(modifier = Modifier.height(100.dp)) }
         }
     }
 
-    // Diálogo para seleccionar playlist a la que agregar la canción
-    cancionParaPlaylist?.let { cancion ->
+    songToAddToPlaylist?.let { song ->
         AlertDialog(
-            onDismissRequest = { cancionParaPlaylist = null },
+            onDismissRequest = { songToAddToPlaylist = null },
             title = { Text("Agregar a playlist", color = Color.White) },
             text = {
-                if (listaPlaylists.isEmpty()) {
-                    Text(
-                        "No tienes playlists aún.\nCrea una desde Tu Biblioteca.",
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    )
+                if (playlists.isEmpty()) {
+                    Text("No tienes playlists aún.", color = Color.Gray)
                 } else {
                     LazyColumn {
-                        items(listaPlaylists) { playlist ->
+                        items(playlists) { playlist ->
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        vistaModeloMusica.agregarCancionAPlaylist(
-                                            estadoUsuario.uid, playlist.id, cancion.id
-                                        )
-                                        cancionParaPlaylist = null
-                                        Toast.makeText(context, "Canción agregada a \"${playlist.name}\"", Toast.LENGTH_SHORT).show()
+                                        musicViewModel.agregarCancionAPlaylist(userState.uid, playlist.id, song.id)
+                                        songToAddToPlaylist = null
+                                        Toast.makeText(context, "Agregado", Toast.LENGTH_SHORT).show()
                                     }
                                     .padding(vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
@@ -146,7 +130,7 @@ fun AlbumDetailScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { cancionParaPlaylist = null }) {
+                TextButton(onClick = { songToAddToPlaylist = null }) {
                     Text("Cerrar", color = Color.Gray)
                 }
             },
@@ -156,7 +140,7 @@ fun AlbumDetailScreen(
 }
 
 @Composable
-fun CabeceraImagenAlbum(urlPortada: String) {
+fun AlbumHeaderImage(coverUrl: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -165,8 +149,8 @@ fun CabeceraImagenAlbum(urlPortada: String) {
         contentAlignment = Alignment.Center
     ) {
         Surface(modifier = Modifier.size(200.dp), shadowElevation = 12.dp, color = Color.DarkGray) {
-            if (urlPortada.isNotEmpty()) {
-                AsyncImage(model = urlPortada, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            if (coverUrl.isNotEmpty()) {
+                AsyncImage(model = coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             } else {
                 Box(Modifier.fillMaxSize().background(Color.DarkGray)) {
                     Icon(Icons.Default.Audiotrack, null, Modifier.align(Alignment.Center).size(80.dp), tint = Color.Gray)
@@ -177,7 +161,7 @@ fun CabeceraImagenAlbum(urlPortada: String) {
 }
 
 @Composable
-fun InformacionTextoAlbum(album: Album) {
+fun AlbumInfoSection(album: Album) {
     Column(modifier = Modifier.padding(16.dp)) {
         Text(album.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(12.dp))
@@ -192,80 +176,69 @@ fun InformacionTextoAlbum(album: Album) {
 }
 
 @Composable
-fun PanelAccionesAlbum(
-    alReproducirTodo: () -> Unit = {},
-    alAlternarAleatorio: () -> Unit = {},
-    alAgregarABiblioteca: () -> Unit = {},
-    alDescargar: () -> Unit = {}
+fun AlbumActionPanel(
+    onPlayAll: () -> Unit = {},
+    onShuffle: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Agregar a biblioteca
-        IconButton(onClick = { alAgregarABiblioteca() }) {
-            Icon(Icons.Default.AddCircleOutline, "Guardar en biblioteca", tint = Color.Gray, modifier = Modifier.size(28.dp))
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.AddCircleOutline, null, tint = Color.Gray, modifier = Modifier.size(28.dp))
         }
-        // Descargar
-        IconButton(onClick = { alDescargar() }) {
-            Icon(Icons.Default.DownloadForOffline, "Descargar", tint = Color.Gray, modifier = Modifier.size(28.dp))
+        IconButton(onClick = { }) {
+            Icon(Icons.Default.DownloadForOffline, null, tint = Color.Gray, modifier = Modifier.size(28.dp))
         }
-
         Spacer(Modifier.weight(1f))
-
-        // Botón Shuffle
-        IconButton(onClick = { alAlternarAleatorio() }) {
-            Icon(Icons.Default.Shuffle, "Reproducción aleatoria", tint = Color(0xFF1DB954), modifier = Modifier.size(28.dp))
+        IconButton(onClick = { onShuffle() }) {
+            Icon(Icons.Default.Shuffle, null, tint = Color(0xFF1DB954), modifier = Modifier.size(28.dp))
         }
         Spacer(Modifier.width(8.dp))
-        // Botón Play circular
         Box(
-            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF1DB954)).clickable { alReproducirTodo() },
+            modifier = Modifier.size(56.dp).clip(CircleShape).background(Color(0xFF1DB954)).clickable { onPlayAll() },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.PlayArrow, "Reproducir todo", tint = Color.Black, modifier = Modifier.size(32.dp))
+            Icon(Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(32.dp))
         }
     }
 }
 
 @Composable
-fun FilaCancionAlbum(
-    cancion: Song,
-    alPulsar: () -> Unit,
-    alAgregarACola: () -> Unit = {},
-    alAgregarAPlaylist: () -> Unit = {}
+fun AlbumSongRow(
+    song: Song,
+    onPlay: () -> Unit,
+    onAddToQueue: () -> Unit = {},
+    onAddToPlaylist: () -> Unit = {}
 ) {
-    var menuExpandido by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { alPulsar() }
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().clickable { onPlay() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            Text(cancion.artist, color = Color.Gray, fontSize = 12.sp)
+            Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            Text(song.artist, color = Color.Gray, fontSize = 12.sp)
         }
         Box {
-            IconButton(onClick = { menuExpandido = true }) {
-                Icon(Icons.Default.MoreVert, "Opciones", tint = Color.Gray)
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.MoreVert, null, tint = Color.Gray)
             }
             DropdownMenu(
-                expanded = menuExpandido, 
-                onDismissRequest = { menuExpandido = false },
+                expanded = showMenu, 
+                onDismissRequest = { showMenu = false },
                 containerColor = Color(0xFF282828)
             ) {
                 DropdownMenuItem(
                     text = { Text("Agregar a la cola", color = Color.White) },
                     leadingIcon = { Icon(Icons.Default.QueueMusic, null, tint = Color.White) },
-                    onClick = { alAgregarACola(); menuExpandido = false }
+                    onClick = { onAddToQueue(); showMenu = false }
                 )
                 DropdownMenuItem(
                     text = { Text("Agregar a playlist", color = Color.White) },
                     leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color.White) },
-                    onClick = { alAgregarAPlaylist(); menuExpandido = false }
+                    onClick = { onAddToPlaylist(); showMenu = false }
                 )
             }
         }

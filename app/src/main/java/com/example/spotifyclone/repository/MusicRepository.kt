@@ -138,6 +138,18 @@ class MusicRepository {
     }
 
     /**
+     * Obtiene el historial de actividad del usuario desde Firestore.
+     */
+    fun getActivityLogs(userId: String): Flow<List<ActivityLog>> = flow {
+        val snapshot = activityLogCollection
+            .whereEqualTo("userId", userId)
+            .orderBy("timestamp", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(15)
+            .get().await()
+        emit(snapshot.toObjects(ActivityLog::class.java))
+    }
+
+    /**
      * FUNCIÓN MAESTRA (Seed): Se encarga de llenar la app de música real la primera vez.
      * 1. Borra los datos de prueba viejos.
      * 2. Busca 50 canciones famosas en iTunes de forma automática.

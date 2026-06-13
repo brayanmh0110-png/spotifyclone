@@ -19,17 +19,17 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
  */
 @Composable
 fun RegisterScreen(
-    controladorNavegacion: NavHostController, 
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController, 
+    authViewModel: AuthViewModel
 ) {
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    val estadoUsuario by authViewModel.userState.collectAsState()
     var contrasena by remember { mutableStateOf("") }
-    val errorServidor by vistaModeloAutenticacion.error.collectAsState()
+    val errorServidor by authViewModel.error.collectAsState()
 
     Scaffold(
         containerColor = Color.Black,
         topBar = {
-            IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+            IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
             }
         }
@@ -47,7 +47,7 @@ fun RegisterScreen(
             // Campo de Nombre
             OutlinedTextField(
                 value = estadoUsuario.name,
-                onValueChange = { vistaModeloAutenticacion.onNameChange(it) },
+                onValueChange = { authViewModel.onNameChange(it) },
                 label = { Text("¿Cómo te llamas?") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
@@ -58,7 +58,7 @@ fun RegisterScreen(
             // Campo de Email
             OutlinedTextField(
                 value = estadoUsuario.email,
-                onValueChange = { vistaModeloAutenticacion.onEmailChange(it) },
+                onValueChange = { authViewModel.onEmailChange(it) },
                 label = { Text("Correo electrónico") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
@@ -82,7 +82,7 @@ fun RegisterScreen(
             Spacer(Modifier.weight(1f))
 
             Button(
-                onClick = { vistaModeloAutenticacion.register(contrasena) },
+                onClick = { authViewModel.register(contrasena) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954))
             ) {

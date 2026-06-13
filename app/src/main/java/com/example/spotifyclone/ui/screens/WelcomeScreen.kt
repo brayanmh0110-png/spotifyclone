@@ -19,7 +19,7 @@ import com.example.spotifyclone.navigation.Screen
  * Proporciona el punto de entrada para el registro y el inicio de sesión.
  */
 @Composable
-fun WelcomeScreen(controladorNavegacion: NavHostController) {
+fun WelcomeScreen(navController: NavHostController) {
     // Contenedor principal con fondo negro sólido
     Box(
         modifier = Modifier
@@ -47,7 +47,7 @@ fun WelcomeScreen(controladorNavegacion: NavHostController) {
 
             // Botón de Registro Principal (Verde Spotify)
             Button(
-                onClick = { controladorNavegacion.navigate(Screen.Register.route) },
+                onClick = { navController.navigate(Screen.Register.route) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954))
             ) {
@@ -58,7 +58,7 @@ fun WelcomeScreen(controladorNavegacion: NavHostController) {
 
             // Botón de Login (Estilo contorno blanco)
             OutlinedButton(
-                onClick = { controladorNavegacion.navigate(Screen.LoginOptions.route) },
+                onClick = { navController.navigate(Screen.LoginOptions.route) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 border = ButtonDefaults.outlinedButtonBorder(enabled = true).copy(width = 0.5.dp)
             ) {

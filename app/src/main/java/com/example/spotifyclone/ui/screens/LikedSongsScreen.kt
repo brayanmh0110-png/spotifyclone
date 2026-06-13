@@ -39,22 +39,22 @@ import com.example.spotifyclone.model.Song as MusicSong
  */
 @Composable
 fun LikedSongsScreen(
-    controladorNavegacion: NavHostController,
-    vistaModeloAutenticacion: AuthViewModel,
-    vistaModeloMusica: MusicViewModel
+    navController: NavHostController,
+    authViewModel: AuthViewModel,
+    musicViewModel: MusicViewModel
 ) {
     val context = LocalContext.current
-    val listaFavoritos by vistaModeloMusica.favorites.collectAsState()
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
-    val listaPlaylists by vistaModeloMusica.playlists.collectAsState()
+    val listaFavoritos by musicViewModel.favorites.collectAsState()
+    val estadoUsuario by authViewModel.userState.collectAsState()
+    val listaPlaylists by musicViewModel.playlists.collectAsState()
 
     // Canción seleccionada para agregar a playlist
     var cancionParaPlaylist by remember { mutableStateOf<MusicSong?>(null) }
 
     LaunchedEffect(estadoUsuario.uid) {
         if (estadoUsuario.uid.isNotEmpty()) {
-            vistaModeloMusica.loadFavorites(estadoUsuario.uid)
-            vistaModeloMusica.cargarPlaylists(estadoUsuario.uid)
+            musicViewModel.loadFavorites(estadoUsuario.uid)
+            musicViewModel.cargarPlaylists(estadoUsuario.uid)
         }
     }
 
@@ -62,12 +62,12 @@ fun LikedSongsScreen(
         containerColor = Color.Black,
         topBar = {
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { controladorNavegacion.popBackStack() }) {
+                IconButton(onClick = { navController.popBackStack() }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
                 }
                 Spacer(Modifier.weight(1f))
                 // Botón buscar → va a la pantalla de búsqueda
-                IconButton(onClick = { controladorNavegacion.navigate(Screen.Search.route) }) {
+                IconButton(onClick = { navController.navigate(Screen.Search.route) }) {
                     Icon(Icons.Default.Search, "Buscar", tint = Color.White)
                 }
                 IconButton(onClick = {
@@ -84,20 +84,38 @@ fun LikedSongsScreen(
                     cantidad = listaFavoritos.size,
                     alReproducirTodo = {
                         listaFavoritos.firstOrNull()?.let {
-                            vistaModeloMusica.playSong(it, listaFavoritos)
+                            musicViewModel.playSong(it, listaFavoritos)
                         }
                     }
                 )
             }
 
-            items(listaFavoritos) { cancion ->
-                ItemCancionFavorita(
-                    cancion = cancion,
-                    alPulsar = { vistaModeloMusica.playSong(cancion, listaFavoritos) },
-                    alQuitar = { vistaModeloMusica.toggleFavorite(estadoUsuario.uid, cancion.id) },
-                    alAgregarACola = { vistaModeloMusica.agregarALaCola(cancion) },
-                    alAgregarAPlaylist = { cancionParaPlaylist = cancion }
-                )
+            if (listaFavoritos.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.FavoriteBorder, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text("Aún no tienes canciones favoritas", color = Color.White, fontWeight = FontWeight.Bold)
+                            Text("Tus canciones favoritas aparecerán aquí.", color = Color.Gray, fontSize = 14.sp)
+                        }
+                    }
+                }
+            } else {
+                items(listaFavoritos) { cancion ->
+                    ItemCancionFavorita(
+                        cancion = cancion,
+                        alPulsar = { musicViewModel.playSong(cancion, listaFavoritos) },
+                        alQuitar = { musicViewModel.toggleFavorite(estadoUsuario.uid, cancion.id) },
+                        alAgregarACola = { musicViewModel.agregarALaCola(cancion) },
+                        alAgregarAPlaylist = { cancionParaPlaylist = cancion }
+                    )
+                }
             }
 
             item { Spacer(modifier = Modifier.height(100.dp)) }
@@ -123,7 +141,7 @@ fun LikedSongsScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        vistaModeloMusica.agregarCancionAPlaylist(
+                                        musicViewModel.agregarCancionAPlaylist(
                                             estadoUsuario.uid, playlist.id, cancion.id
                                         )
                                         cancionParaPlaylist = null

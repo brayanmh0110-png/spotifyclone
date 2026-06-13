@@ -12,9 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,18 +34,21 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
  */
 @Composable
 fun PanelUsuScreen(
-    controladorNavegacion: NavHostController, 
-    vistaModeloAutenticacion: AuthViewModel
+    navController: NavHostController, 
+    authViewModel: AuthViewModel
 ) {
     val context = LocalContext.current
-    val estadoUsuario by vistaModeloAutenticacion.userState.collectAsState()
+    val estadoUsuario by authViewModel.userState.collectAsState()
+
+    var mostrarDialogoNombre by remember { mutableStateOf(false) }
+    var nuevoNombre by remember { mutableStateOf("") }
 
     val lanzadorSelectorFoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             uri?.let {
                 // Si el usuario elige una foto, la procesamos en el ViewModel
-                vistaModeloAutenticacion.updateProfilePicture(it.toString())
+                authViewModel.updateProfilePicture(it.toString())
             }
         }
     )
@@ -57,7 +58,7 @@ fun PanelUsuScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.4f))
-            .clickable { controladorNavegacion.popBackStack() } // Cierra al tocar fuera
+            .clickable { navController.popBackStack() } // Cierra al tocar fuera
     ) {
         // El panel blanco/negro real (ocupa el 82% del ancho)
         Column(
@@ -71,7 +72,13 @@ fun PanelUsuScreen(
             // 1. Cabecera con Perfil y Nombre
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .clickable { 
+                        nuevoNombre = estadoUsuario.name
+                        mostrarDialogoNombre = true 
+                    }
             ) {
                 // Foto de perfil
                 if (estadoUsuario.photoUrl.isNotEmpty()) {
@@ -97,7 +104,7 @@ fun PanelUsuScreen(
                         "Usuario"
                     }
                     Text(nombreAMostrar, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Ver perfil", color = Color.Gray, fontSize = 12.sp)
+                    Text("Editar perfil", color = Color(0xFF1DB954), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                 }
             }
 
@@ -113,8 +120,7 @@ fun PanelUsuScreen(
             })
 
             OptionItem(Icons.Default.History, "Recientes", alPulsar = {
-                controladorNavegacion.popBackStack()
-                controladorNavegacion.navigate(Screen.Home.route)
+                navController.navigate(Screen.ActivityLog.route)
             })
 
             OptionItem(Icons.Default.Campaign, "Tus avisos", alPulsar = {
@@ -126,7 +132,11 @@ fun PanelUsuScreen(
             })
 
             OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", alPulsar = {
-                vistaModeloAutenticacion.logout()
+                authViewModel.logout()
+            })
+
+            OptionItem(Icons.Default.DeleteForever, "Eliminar cuenta permanentemente", alPulsar = {
+                authViewModel.deleteAccount()
             })
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -182,6 +192,42 @@ fun PanelUsuScreen(
                 )
                 Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
             }
+        }
+
+        // 5. Diálogo para editar el nombre
+        if (mostrarDialogoNombre) {
+            AlertDialog(
+                onDismissRequest = { mostrarDialogoNombre = false },
+                title = { Text("Editar nombre de perfil", color = Color.White) },
+                text = {
+                    OutlinedTextField(
+                        value = nuevoNombre,
+                        onValueChange = { nuevoNombre = it },
+                        label = { Text("Nombre") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        if (nuevoNombre.isNotBlank()) {
+                            authViewModel.updateName(nuevoNombre)
+                            mostrarDialogoNombre = false
+                        }
+                    }) {
+                        Text("Guardar", color = Color(0xFF1DB954))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { mostrarDialogoNombre = false }) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+                },
+                containerColor = Color(0xFF282828)
+            )
         }
     }
 }
