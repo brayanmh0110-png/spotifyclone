@@ -63,6 +63,9 @@ dependencies {
 
     // Coil
     implementation(libs.coil.compose)
+    
+    // Palette para colores dinámicos
+    implementation(libs.androidx.palette)
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

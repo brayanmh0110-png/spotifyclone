@@ -21,7 +21,8 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * ActivityLogScreen: Muestra el historial de acciones del usuario.
+ * ActivityLogScreen: Muestra el historial de acciones del usuario en la app.
+ * Lista las últimas reproducciones, creaciones de playlists, etc.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +34,7 @@ fun ActivityLogScreen(
     val logs by musicViewModel.activityLogs.collectAsState()
     val userState by authViewModel.userState.collectAsState()
 
+    // Cargamos el historial cada vez que se abre la pantalla
     LaunchedEffect(userState.uid) {
         if (userState.uid.isNotEmpty()) {
             musicViewModel.cargarHistorial(userState.uid)
@@ -68,8 +70,12 @@ fun ActivityLogScreen(
     }
 }
 
+/**
+ * LogItem: Una fila del historial con icono y fecha formateada.
+ */
 @Composable
 fun LogItem(log: com.example.spotifyclone.model.ActivityLog) {
+    // Formateamos el Timestamp de Firebase a algo legible (Ej: 15 May, 14:30)
     val dateStr = remember(log.timestamp) {
         val sdf = SimpleDateFormat("dd MMM, HH:mm", Locale.getDefault())
         sdf.format(log.timestamp.toDate())

@@ -29,8 +29,8 @@ import com.example.spotifyclone.navigation.Screen
 import com.example.spotifyclone.viewmodel.AuthViewModel
 
 /**
- * PanelUsuScreen: Menú lateral que se muestra como un diálogo.
- * Permite gestionar la cuenta del usuario, cambiar foto y cerrar sesión.
+ * PanelUsuScreen: Menú lateral que permite gestionar la cuenta.
+ * Es un Diálogo que aparece desde la izquierda simulando el panel de Spotify.
  */
 @Composable
 fun PanelUsuScreen(
@@ -43,187 +43,69 @@ fun PanelUsuScreen(
     var mostrarDialogoNombre by remember { mutableStateOf(false) }
     var nuevoNombre by remember { mutableStateOf("") }
 
+    // Lanzador para abrir la galería del teléfono y elegir foto de perfil
     val lanzadorSelectorFoto = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
-            uri?.let {
-                // Si el usuario elige una foto, la procesamos en el ViewModel
-                authViewModel.updateProfilePicture(it.toString())
-            }
+            uri?.let { authViewModel.updateProfilePicture(it.toString()) }
         }
     )
 
-    // Contenedor principal con fondo semi-transparente
+    // Fondo oscuro semi-transparente que cierra el panel si tocas fuera
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.4f))
-            .clickable { navController.popBackStack() } // Cierra al tocar fuera
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.4f)).clickable { navController.popBackStack() }
     ) {
-        // El panel blanco/negro real (ocupa el 82% del ancho)
+        // --- CUERPO DEL PANEL (Ocupa el 82% del ancho) ---
         Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(0.82f)
-                .background(Color.Black)
-                .clickable(enabled = false) {} // Evita que los clics dentro cierren el panel
-                .padding(16.dp)
+            modifier = Modifier.fillMaxHeight().fillMaxWidth(0.82f).background(Color.Black).clickable(enabled = false) {}.padding(16.dp)
         ) {
-            // 1. Cabecera con Perfil y Nombre
+            // Cabecera: Perfil e información básica
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .clickable { 
-                        nuevoNombre = estadoUsuario.name
-                        mostrarDialogoNombre = true 
-                    }
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).clickable { 
+                    nuevoNombre = estadoUsuario.name
+                    mostrarDialogoNombre = true 
+                }
             ) {
-                // Foto de perfil
                 if (estadoUsuario.photoUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = estadoUsuario.photoUrl,
-                        contentDescription = null,
-                        modifier = Modifier.size(50.dp).clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                    AsyncImage(model = estadoUsuario.photoUrl, null, modifier = Modifier.size(50.dp).clip(CircleShape), contentScale = ContentScale.Crop)
                 } else {
                     Icon(Icons.Default.AccountCircle, null, Modifier.size(50.dp), tint = Color.Gray)
                 }
-                
-                Spacer(modifier = Modifier.width(12.dp))
-                
-                // Nombre del usuario (O fragmento del correo si no hay nombre)
+                Spacer(Modifier.width(12.dp))
                 Column {
-                    val nombreAMostrar = if (estadoUsuario.name.isNotEmpty()) {
-                        estadoUsuario.name
-                    } else if (estadoUsuario.email.isNotEmpty()) {
-                        estadoUsuario.email.substringBefore("@")
-                    } else {
-                        "Usuario"
-                    }
+                    val nombreAMostrar = if (estadoUsuario.name.isNotEmpty()) estadoUsuario.name else estadoUsuario.email.substringBefore("@")
                     Text(nombreAMostrar, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    Text("Editar perfil", color = Color(0xFF1DB954), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                    Text("Ver perfil", color = Color.Gray, fontSize = 12.sp)
                 }
             }
 
             HorizontalDivider(Modifier.padding(vertical = 16.dp), thickness = 0.5.dp, color = Color.White.copy(alpha = 0.2f))
 
-            // 2. Lista de Opciones
-            OptionItem(Icons.Default.AddCircle, "Agregar Cuenta", alPulsar = {
-                Toast.makeText(context, "Función de múltiples cuentas próximamente", Toast.LENGTH_SHORT).show()
-            })
-
+            // --- LISTA DE OPCIONES ---
             OptionItem(Icons.Default.Image, "Cambiar foto de perfil", alPulsar = {
                 lanzadorSelectorFoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             })
-
-            OptionItem(Icons.Default.History, "Recientes", alPulsar = {
-                navController.navigate(Screen.ActivityLog.route)
-            })
-
-            OptionItem(Icons.Default.Campaign, "Tus avisos", alPulsar = {
-                Toast.makeText(context, "No tienes avisos nuevos", Toast.LENGTH_SHORT).show()
-            })
-
-            OptionItem(Icons.Default.Settings, "Configuración y privacidad", alPulsar = {
-                Toast.makeText(context, "Configuración próximamente", Toast.LENGTH_SHORT).show()
-            })
-
-            OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", alPulsar = {
-                authViewModel.logout()
-            })
-
-            OptionItem(Icons.Default.DeleteForever, "Eliminar cuenta permanentemente", alPulsar = {
-                authViewModel.deleteAccount()
-            })
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 3. Sección de Actividad e Invitación
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier.clickable {
-                        Toast.makeText(context, "Activa tu actividad para compartir lo que escuchas", Toast.LENGTH_SHORT).show()
-                    },
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    if (estadoUsuario.photoUrl.isNotEmpty()) {
-                        AsyncImage(model = estadoUsuario.photoUrl, contentDescription = null, modifier = Modifier.size(60.dp).clip(CircleShape), contentScale = ContentScale.Crop)
-                    } else {
-                        Icon(Icons.Default.AccountCircle, null, Modifier.size(60.dp), tint = Color.Gray)
-                    }
-                    Text("Actividad", color = Color.White, fontSize = 12.sp)
-                    Text("Activar", color = Color(0xFF1DB954), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.width(24.dp))
-
-                Column(
-                    modifier = Modifier.clickable {
-                        Toast.makeText(context, "Función de invitación próximamente", Toast.LENGTH_SHORT).show()
-                    },
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Box(Modifier.size(60.dp).clip(CircleShape).background(Color.DarkGray), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Add, null, tint = Color.White)
-                    }
-                    Text("Invitar a amigos", color = Color.White, fontSize = 12.sp)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 4. Sección Mensajes
-            Text("Mensajes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { Toast.makeText(context, "No tienes mensajes nuevos", Toast.LENGTH_SHORT).show() }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Comparte lo que te gusta con tus personas favoritas en Spotify",
-                    color = Color.Gray,
-                    fontSize = 13.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(Icons.Default.ChevronRight, null, tint = Color.Gray)
-            }
+            OptionItem(Icons.Default.History, "Recientes", alPulsar = { navController.navigate(Screen.ActivityLog.route) })
+            OptionItem(Icons.Default.Settings, "Configuración y privacidad")
+            OptionItem(Icons.AutoMirrored.Filled.Logout, "Cerrar sesión", alPulsar = { authViewModel.logout() })
+            OptionItem(Icons.Default.DeleteForever, "Eliminar cuenta", alPulsar = { authViewModel.deleteAccount() })
         }
 
-        // 5. Diálogo para editar el nombre
+        // Diálogo para editar el nombre de usuario
         if (mostrarDialogoNombre) {
             AlertDialog(
                 onDismissRequest = { mostrarDialogoNombre = false },
-                title = { Text("Editar nombre de perfil", color = Color.White) },
+                title = { Text("Editar nombre", color = Color.White) },
                 text = {
                     OutlinedTextField(
-                        value = nuevoNombre,
-                        onValueChange = { nuevoNombre = it },
-                        label = { Text("Nombre") },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        )
+                        value = nuevoNombre, onValueChange = { nuevoNombre = it },
+                        singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedTextColor = Color.White, unfocusedTextColor = Color.White)
                     )
                 },
                 confirmButton = {
-                    TextButton(onClick = {
-                        if (nuevoNombre.isNotBlank()) {
-                            authViewModel.updateName(nuevoNombre)
-                            mostrarDialogoNombre = false
-                        }
-                    }) {
+                    TextButton(onClick = { if (nuevoNombre.isNotBlank()) { authViewModel.updateName(nuevoNombre); mostrarDialogoNombre = false } }) {
                         Text("Guardar", color = Color(0xFF1DB954))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { mostrarDialogoNombre = false }) {
-                        Text("Cancelar", color = Color.Gray)
                     }
                 },
                 containerColor = Color(0xFF282828)
@@ -233,7 +115,7 @@ fun PanelUsuScreen(
 }
 
 /**
- * OptionItem: Fila simple para cada opción del menú.
+ * OptionItem: Fila reutilizable para las opciones del menú.
  */
 @Composable
 fun OptionItem(icono: ImageVector, titulo: String, alPulsar: () -> Unit = {}) {

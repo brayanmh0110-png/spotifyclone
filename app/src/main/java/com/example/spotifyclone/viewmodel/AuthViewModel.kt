@@ -1,28 +1,27 @@
 package com.example.spotifyclone.viewmodel
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.spotifyclone.data.UserPreferencesRepository
 import com.example.spotifyclone.model.User
 import com.example.spotifyclone.repository.AuthRepository
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
 
+/**
+ * AuthViewModel: Gestiona todo lo relacionado con el usuario.
+ * Controla el registro, inicio de sesión, perfiles y persistencia de la sesión local.
+ */
 class AuthViewModel(application: Application) : AndroidViewModel(application) {
     
     private val authRepository = AuthRepository()
     private val userPrefs = UserPreferencesRepository(application)
 
+    // --- ESTADOS REACTIVOS ---
     private val _userState = MutableStateFlow(User())
     val userState: StateFlow<User> = _userState.asStateFlow()
 
@@ -33,21 +32,29 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
+        // Al encender la app, revisamos si ya había un usuario logueado en el teléfono
         checkSession()
     }
 
+    /**
+     * Revisa la sesión guardada localmente (DataStore).
+     */
     private fun checkSession() {
         viewModelScope.launch {
-            val savedUid = userPrefs.userUid.first()
-            val isLoggedIn = savedUid != null && authRepository.isUserLoggedIn()
-            _isLoggedIn.value = isLoggedIn
-            if (isLoggedIn && savedUid != null) {
-                fetchUserProfile(savedUid)
+            val uid = userPrefs.userUid.first()
+            if (uid != null) {
+                _isLoggedIn.value = true
+                fetchUserProfile(uid) // Si hay sesión, traemos los datos de Firebase
+            } else {
+                _isLoggedIn.value = false
             }
         }
     }
 
-    private fun fetchUserProfile(uid: String) {
+    /**
+     * Trae los datos actualizados del usuario (Nombre, Foto, Favoritos) desde Firebase.
+     */
+    fun fetchUserProfile(uid: String) {
         viewModelScope.launch {
             val user = authRepository.getUserProfile(uid)
             if (user != null) {
@@ -56,73 +63,55 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun onNameChange(name: String) {
-        _userState.value = _userState.value.copy(name = name)
-    }
+    // Funciones para manejar cambios en los campos de texto
+    fun onNameChange(newName: String) { _userState.value = _userState.value.copy(name = newName) }
+    fun onEmailChange(newEmail: String) { _userState.value = _userState.value.copy(email = newEmail) }
 
-    fun onEmailChange(email: String) {
-        _userState.value = _userState.value.copy(email = email)
-    }
-
-    fun onPasswordChange(password: String) {
-        // We don't store password in the User model anymore, 
-        // using a separate state for UI if needed, or just temporary
-    }
-
-    // Validation and Registration
+    /**
+     * Registra un nuevo usuario en Firebase Auth y Firestore.
+     */
     fun register(password: String) {
-        val user = _userState.value
-        if (!authRepository.validateEmail(user.email)) {
-            _error.value = "Email inválido"
-            return
-        }
-        if (!authRepository.validatePassword(password)) {
-            _error.value = "La contraseña debe tener mínimo 8 caracteres, un número y un símbolo"
-            return
-        }
-
         viewModelScope.launch {
-            val result = authRepository.register(user.name, user.email, password)
-            if (result.isSuccess) {
-                val uid = result.getOrThrow()
-                userPrefs.saveUserSession(uid, user.email)
-                fetchUserProfile(uid)
-                _isLoggedIn.value = true
-            } else {
-                _error.value = mapExceptionToMessage(result.exceptionOrNull())
-            }
+            _error.value = null
+            authRepository.register(_userState.value.name, _userState.value.email, password)
+                .onSuccess { uid ->
+                    fetchUserProfile(uid)
+                    userPrefs.saveUserSession(uid, _userState.value.email)
+                    _isLoggedIn.value = true
+                }
+                .onFailure { e ->
+                    _error.value = mapExceptionToMessage(e)
+                }
         }
     }
 
+    /**
+     * Inicia sesión con correo y contraseña.
+     */
     fun login(password: String) {
-        val user = _userState.value
         viewModelScope.launch {
-            val result = authRepository.login(user.email, password)
-            if (result.isSuccess) {
-                val uid = result.getOrThrow()
-                userPrefs.saveUserSession(uid, user.email)
-                fetchUserProfile(uid)
-                _isLoggedIn.value = true
-            } else {
-                _error.value = mapExceptionToMessage(result.exceptionOrNull())
-            }
+            _error.value = null
+            authRepository.login(_userState.value.email, password)
+                .onSuccess { uid ->
+                    fetchUserProfile(uid)
+                    userPrefs.saveUserSession(uid, _userState.value.email)
+                    _isLoggedIn.value = true
+                }
+                .onFailure { e ->
+                    _error.value = mapExceptionToMessage(e)
+                }
         }
     }
 
-    private fun mapExceptionToMessage(exception: Throwable?): String {
-        return when (exception) {
-            is FirebaseAuthUserCollisionException -> "Este correo ya está registrado."
-            is FirebaseAuthInvalidCredentialsException -> "Credenciales incorrectas. Verifica tu correo y contraseña."
-            is FirebaseAuthInvalidUserException -> "No existe una cuenta con este correo."
-            else -> exception?.localizedMessage ?: "Ha ocurrido un error inesperado."
-        }
-    }
-
+    /**
+     * Cierra la sesión y limpia los datos del teléfono.
+     */
     fun logout() {
         viewModelScope.launch {
             authRepository.logout()
             userPrefs.clearUserSession()
             _isLoggedIn.value = false
+            _userState.value = User()
         }
     }
 
@@ -130,70 +119,41 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
      * Elimina permanentemente la cuenta del usuario.
      */
     fun deleteAccount() {
-        val uid = _userState.value.uid
-        if (uid.isEmpty()) return
-
         viewModelScope.launch {
-            val result = authRepository.deleteAccount(uid)
-            if (result.isSuccess) {
-                userPrefs.clearUserSession()
-                _isLoggedIn.value = false
-            } else {
-                _error.value = "No se pudo eliminar la cuenta. Inténtalo de nuevo más tarde."
-            }
-        }
-    }
-
-    fun updateProfilePicture(uriString: String) {
-        val uid = _userState.value.uid
-        if (uid.isEmpty()) return
-
-        viewModelScope.launch {
-            try {
-                val context = getApplication<Application>().applicationContext
-                val uri = Uri.parse(uriString)
-                
-                // Crear una copia local permanente de la imagen
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val file = File(context.filesDir, "profile_$uid.jpg")
-                val outputStream = FileOutputStream(file)
-                inputStream?.use { input ->
-                    outputStream.use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                
-                val localPath = file.absolutePath
-                
-                // Guardar la ruta local en Firestore
-                val result = authRepository.updateProfilePicture(uid, localPath)
-                if (result.isSuccess) {
-                    _userState.value = _userState.value.copy(photoUrl = localPath)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _error.value = "Error al procesar la imagen"
+            authRepository.deleteAccount(_userState.value.uid).onSuccess {
+                logout()
+            }.onFailure { e ->
+                _error.value = "No se pudo eliminar: ${e.message}"
             }
         }
     }
 
     /**
-     * Actualiza el nombre del usuario en Firestore y en el estado local.
+     * Actualiza la foto de perfil en Firebase.
      */
-    fun updateName(newName: String) {
-        val uid = _userState.value.uid
-        if (uid.isEmpty() || newName.isBlank()) return
-
+    fun updateProfilePicture(uri: String) {
         viewModelScope.launch {
-            val result = authRepository.updateUserName(uid, newName.trim())
-            if (result.isSuccess) {
-                _userState.value = _userState.value.copy(name = newName.trim())
-            } else {
-                _error.value = "Error al actualizar el nombre"
+            authRepository.updateProfilePicture(_userState.value.uid, uri).onSuccess {
+                _userState.value = _userState.value.copy(photoUrl = uri)
             }
         }
     }
-    
+
+    /**
+     * Actualiza el nombre mostrado en Firebase.
+     */
+    fun updateName(newName: String) {
+        viewModelScope.launch {
+            authRepository.updateUserName(_userState.value.uid, newName).onSuccess {
+                _userState.value = _userState.value.copy(name = newName)
+            }
+        }
+    }
+
+    private fun mapExceptionToMessage(e: Throwable?): String {
+        return e?.message ?: "Ocurrió un error inesperado"
+    }
+
     fun clearError() {
         _error.value = null
     }

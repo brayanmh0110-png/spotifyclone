@@ -1,5 +1,6 @@
 package com.example.spotifyclone.ui.screens
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 
 /**
  * HomeScreen: Pantalla principal de la aplicación.
+ * Muestra recomendaciones, mixes, artistas favoritos y permite filtrar por categorías.
  */
 @Composable
 fun HomeScreen(
@@ -39,15 +41,19 @@ fun HomeScreen(
     musicViewModel: MusicViewModel,
     authViewModel: AuthViewModel
 ) {
+    // --- ESTADOS DE LA PANTALLA ---
     var selectedFilter by remember { mutableStateOf("Todas") }
     val artists by musicViewModel.artists.collectAsState()
     val albums by musicViewModel.albums.collectAsState()
     val songs by musicViewModel.songs.collectAsState()
     val userState by authViewModel.userState.collectAsState()
+    val currentSong by musicViewModel.currentSong.collectAsState()
+    val isPlaying by musicViewModel.isPlaying.collectAsState()
 
     Scaffold(
         containerColor = Color.Black,
         topBar = { 
+            // Barra superior con foto de perfil y chips de filtrado
             HomeTopBar(
                 navController = navController,
                 activeFilter = selectedFilter,
@@ -64,6 +70,7 @@ fun HomeScreen(
         ) {
             item { Spacer(modifier = Modifier.height(16.dp)) }
             
+            // Si no hay datos cargados, mostramos un indicador de carga
             if (songs.isEmpty() && albums.isEmpty()) {
                 item {
                     Box(Modifier.fillParentMaxHeight(0.7f).fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -71,8 +78,10 @@ fun HomeScreen(
                     }
                 }
             } else {
+                // Renderizado según el filtro seleccionado
                 when (selectedFilter) {
                     "Todas" -> {
+                        // Sección de Acceso Rápido (Cuadrícula superior)
                         item {
                             Row(Modifier.fillMaxWidth()) {
                                 QuickAccessGridItem(
@@ -98,19 +107,26 @@ fun HomeScreen(
                             }
                         }
 
+                        // Sección: Recomendado para ti (Lista horizontal)
                         if (songs.isNotEmpty()) {
                             item {
                                 SectionTitle("Recomendado para ti")
                                 LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                     items(songs) { song ->
-                                        HorizontalSongCard(song = song) {
+                                        val isCurrent = currentSong?.id == song.id
+                                        HorizontalSongCard(
+                                            song = song,
+                                            isCurrent = isCurrent && isPlaying
+                                        ) {
                                             musicViewModel.playSong(song, songs)
+                                            musicViewModel.registrarReproduccion(userState.uid, song)
                                         }
                                     }
                                 }
                             }
                         }
 
+                        // Sección: Tus Mixes (Álbumes)
                         item {
                             SectionTitle("Tus mixes")
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -127,6 +143,7 @@ fun HomeScreen(
                             }
                         }
                         
+                        // Sección: Artistas Favoritos (Círculos)
                         item {
                             SectionTitle("Tus artistas favoritos")
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -134,7 +151,10 @@ fun HomeScreen(
                                     CircularArtistItem(
                                         name = artist.name,
                                         imageUrl = artist.imageUrl,
-                                        onClick = { navController.navigate(Screen.Library.route) }
+                                        onClick = { 
+                                            musicViewModel.seleccionarArtista(artist)
+                                            navController.navigate(Screen.ArtistDetail.route)
+                                        }
                                     )
                                 }
                             }
@@ -147,7 +167,7 @@ fun HomeScreen(
                             DetailedReleaseCard(
                                 song = song,
                                 onClick = { musicViewModel.playSong(song, songs) },
-                                onFavoriteClick = { musicViewModel.toggleFavorite(userState.uid, song.id) }
+                                onFavoriteClick = { musicViewModel.toggleFavorite(userState.uid, song) }
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -164,6 +184,43 @@ fun HomeScreen(
         }
     }
 }
+
+/**
+ * PlayingBars: Animación de barras verdes que suben y bajan.
+ * Se usa para indicar visualmente qué canción se está reproduciendo.
+ */
+@Composable
+fun PlayingBars(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "bars")
+    
+    // Definimos 3 animaciones diferentes para cada barra
+    val height1 by infiniteTransition.animateFloat(
+        initialValue = 0.3f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Reverse), label = ""
+    )
+    val height2 by infiniteTransition.animateFloat(
+        initialValue = 0.5f, targetValue = 0.2f,
+        animationSpec = infiniteRepeatable(tween(500, easing = LinearEasing), RepeatMode.Reverse), label = ""
+    )
+    val height3 by infiniteTransition.animateFloat(
+        initialValue = 0.2f, targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(tween(350, easing = LinearEasing), RepeatMode.Reverse), label = ""
+    )
+
+    Row(
+        modifier = modifier.height(14.dp).width(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        Box(Modifier.weight(1f).fillMaxHeight(height1).background(Color(0xFF1DB954)))
+        Box(Modifier.weight(1f).fillMaxHeight(height2).background(Color(0xFF1DB954)))
+        Box(Modifier.weight(1f).fillMaxHeight(height3).background(Color(0xFF1DB954)))
+    }
+}
+
+/**
+ * Componentes menores y de diseño (Cards, Items, etc.)
+ */
 
 @Composable
 fun SectionTitle(text: String) {
@@ -190,6 +247,7 @@ fun HomeTopBar(
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            // Foto de perfil circular
             Box(
                 modifier = Modifier
                     .size(32.dp)
@@ -207,6 +265,7 @@ fun HomeTopBar(
             
             Spacer(modifier = Modifier.width(8.dp))
             
+            // Chips de filtrado: Todas, Música, Podcasts
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FilterChipItem(text = "Todas", isActive = activeFilter == "Todas") { onFilterChange("Todas") }
                 FilterChipItem(text = "Música", isActive = activeFilter == "Música") { onFilterChange("Música") }
@@ -286,16 +345,46 @@ fun DetailedReleaseCard(
 }
 
 @Composable
-fun HorizontalSongCard(song: com.example.spotifyclone.model.Song, onClick: () -> Unit) {
+fun HorizontalSongCard(
+    song: com.example.spotifyclone.model.Song, 
+    isCurrent: Boolean = false,
+    onClick: () -> Unit
+) {
     Column(modifier = Modifier.width(140.dp).clickable { onClick() }) {
-        AsyncImage(
-            model = song.coverUrl,
-            contentDescription = null,
-            modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop
-        )
+        Box {
+            AsyncImage(
+                model = song.coverUrl,
+                contentDescription = null,
+                modifier = Modifier.size(140.dp).clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+            // Si es la canción actual, mostramos un overlay con barras animadas
+            if (isCurrent) {
+                Box(
+                    modifier = Modifier
+                        .size(140.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    PlayingBars(Modifier.size(32.dp))
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(song.title, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                song.title, 
+                color = if (isCurrent) Color(0xFF1DB954) else Color.White, 
+                fontSize = 14.sp, 
+                fontWeight = FontWeight.Bold, 
+                maxLines = 1,
+                modifier = Modifier.weight(1f)
+            )
+            if (isCurrent) {
+                PlayingBars()
+            }
+        }
         Text(song.artist, color = Color.Gray, fontSize = 12.sp, maxLines = 1)
     }
 }

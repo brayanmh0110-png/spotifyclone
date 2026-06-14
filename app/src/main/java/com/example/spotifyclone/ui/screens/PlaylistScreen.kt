@@ -27,7 +27,8 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
- * PlaylistScreen: Muestra las canciones de una playlist y permite reproducirlas o quitarlas.
+ * PlaylistScreen: Visualiza el contenido de una playlist creada por el usuario.
+ * Permite reproducir las canciones, quitarlas y ver recomendaciones para añadir.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,27 +42,25 @@ fun PlaylistScreen(
     val songs by musicViewModel.songs.collectAsState()
     val userState by authViewModel.userState.collectAsState()
 
+    // Sincronizamos las playlists al entrar
     LaunchedEffect(userState.uid) {
         if (userState.uid.isNotEmpty()) {
             musicViewModel.cargarPlaylists(userState.uid)
         }
     }
 
+    // Buscamos la playlist específica y sus canciones
     val playlist = playlists.find { it.id == playlistId }
     val playlistSongs = songs.filter { playlist?.songsIds?.contains(it.id) == true }
+    
+    // Filtramos canciones que NO están en la playlist para recomendarlas
     val recommendedSongs = songs.filter { playlist?.songsIds?.contains(it.id) != true }
 
     Scaffold(
         containerColor = Color.Black,
         topBar = {
             CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = playlist?.name ?: "Playlist",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                },
+                title = { Text(text = playlist?.name ?: "Playlist", color = Color.White, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
@@ -71,46 +70,28 @@ fun PlaylistScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+        LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
+            // --- CABECERA DE LA PLAYLIST ---
             item {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                        modifier = Modifier
-                            .size(160.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF282828)),
+                        modifier = Modifier.size(160.dp).clip(RoundedCornerShape(8.dp)).background(Color(0xFF282828)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.QueueMusic,
-                            contentDescription = null,
-                            tint = Color(0xFF1DB954),
-                            modifier = Modifier.size(80.dp)
-                        )
+                        Icon(Icons.Default.QueueMusic, null, tint = Color(0xFF1DB954), modifier = Modifier.size(80.dp))
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    Text(
-                        "${playlistSongs.size} canciones",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                    Text("${playlistSongs.size} canciones", color = Color.Gray, fontSize = 14.sp)
                     Spacer(Modifier.height(16.dp))
 
+                    // Botón para empezar la música
                     Button(
                         onClick = {
-                            playlistSongs.firstOrNull()?.let {
-                                musicViewModel.playSong(it, playlistSongs)
-                            }
+                            playlistSongs.firstOrNull()?.let { musicViewModel.playSong(it, playlistSongs) }
                         },
                         enabled = playlistSongs.isNotEmpty(),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1DB954))
@@ -122,54 +103,42 @@ fun PlaylistScreen(
                 }
             }
 
+            // --- LISTA DE CANCIONES ACTUALES ---
             if (playlistSongs.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Esta playlist está vacía.",
-                            color = Color.Gray,
-                            textAlign = TextAlign.Center,
-                            fontSize = 14.sp
-                        )
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("Esta playlist está vacía.", color = Color.Gray, textAlign = TextAlign.Center, fontSize = 14.sp)
                     }
                 }
             } else {
                 items(playlistSongs) { song ->
                     PlaylistItem(
                         song = song,
-                        onPlay = { musicViewModel.playSong(song, playlistSongs) },
+                        onPlay = { 
+                            musicViewModel.playSong(song, playlistSongs)
+                            musicViewModel.registrarReproduccion(userState.uid, song)
+                        },
                         onRemove = {
-                            playlist?.let {
-                                musicViewModel.quitarCancionDePlaylist(userState.uid, it.id, song.id)
-                            }
+                            playlist?.let { musicViewModel.quitarCancionDePlaylist(userState.uid, it.id, song.id) }
                         }
                     )
                 }
             }
 
+            // --- SECCIÓN: RECOMENDACIONES ---
             if (recommendedSongs.isNotEmpty()) {
                 item {
-                    Text(
-                        text = "Te recomendamos",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                    )
+                    Text("Te recomendamos", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
                 }
                 items(recommendedSongs) { song ->
                     RecommendedItem(
                         song = song,
-                        onPlay = { musicViewModel.playSong(song, recommendedSongs) },
+                        onPlay = { 
+                            musicViewModel.playSong(song, recommendedSongs)
+                            musicViewModel.registrarReproduccion(userState.uid, song)
+                        },
                         onAdd = {
-                            playlist?.let {
-                                musicViewModel.agregarCancionAPlaylist(userState.uid, it.id, song.id)
-                            }
+                            playlist?.let { musicViewModel.agregarCancionAPlaylist(userState.uid, it.id, song.id) }
                         }
                     )
                 }
@@ -180,6 +149,9 @@ fun PlaylistScreen(
     }
 }
 
+/**
+ * PlaylistItem: Fila de canción dentro de la playlist con botón de quitar.
+ */
 @Composable
 private fun PlaylistItem(song: Song, onPlay: () -> Unit, onRemove: () -> Unit) {
     Row(
@@ -197,12 +169,15 @@ private fun PlaylistItem(song: Song, onPlay: () -> Unit, onRemove: () -> Unit) {
             Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             Text(song.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
-        IconButton(onClick = { onRemove() }) {
-            Icon(imageVector = Icons.Default.RemoveCircleOutline, contentDescription = null, tint = Color.Gray)
+        IconButton(onClick = onRemove) {
+            Icon(Icons.Default.RemoveCircleOutline, null, tint = Color.Gray)
         }
     }
 }
 
+/**
+ * RecommendedItem: Fila de canción con botón de añadir (+).
+ */
 @Composable
 private fun RecommendedItem(song: Song, onPlay: () -> Unit, onAdd: () -> Unit) {
     Row(
@@ -220,8 +195,8 @@ private fun RecommendedItem(song: Song, onPlay: () -> Unit, onAdd: () -> Unit) {
             Text(song.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1)
             Text(song.artist, color = Color.Gray, fontSize = 14.sp, maxLines = 1)
         }
-        IconButton(onClick = { onAdd() }) {
-            Icon(imageVector = Icons.Default.AddCircleOutline, contentDescription = null, tint = Color(0xFF1DB954))
+        IconButton(onClick = onAdd) {
+            Icon(Icons.Default.AddCircleOutline, null, tint = Color(0xFF1DB954))
         }
     }
 }

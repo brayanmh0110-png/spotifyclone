@@ -17,53 +17,32 @@ import androidx.navigation.NavHostController
 import com.example.spotifyclone.navigation.Screen
 
 /**
- * WelcomeScreen: Primera pantalla que ve el usuario.
- * Proporciona el punto de entrada para el registro y el inicio de sesión.
+ * WelcomeScreen: Primera pantalla de la aplicación (Onboarding).
+ * Punto de entrada para usuarios que aún no han iniciado sesión.
  */
 @Composable
 fun WelcomeScreen(navController: NavHostController) {
-    // Contenedor principal con fondo negro sólido
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-    ) {
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // --- LOGO Y MENSAJE CENTRAL ---
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo Temporal (Simulando Spotify)
-            Icon(
-                imageVector = Icons.Default.GraphicEq,
-                contentDescription = "Logo",
-                tint = Color(0xFF1DB954),
-                modifier = Modifier.size(80.dp)
-            )
-            
+            Icon(Icons.Default.GraphicEq, "Logo", tint = Color(0xFF1DB954), modifier = Modifier.size(80.dp))
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Mensaje de bienvenida
             Text(
                 text = "Millones de canciones.\nGratis en Spotify.",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center,
-                lineHeight = 40.sp
+                color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, lineHeight = 40.sp
             )
         }
 
+        // --- BOTONES DE ACCIÓN (REGISTRO / LOGIN) ---
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
+            modifier = Modifier.fillMaxSize().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Bottom
         ) {
-            // Botón de Registro Principal (Verde Spotify)
             Button(
                 onClick = { navController.navigate(Screen.Register.route) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -74,7 +53,6 @@ fun WelcomeScreen(navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Botón de Login (Estilo contorno blanco)
             OutlinedButton(
                 onClick = { navController.navigate(Screen.LoginOptions.route) },
                 modifier = Modifier.fillMaxWidth().height(50.dp),

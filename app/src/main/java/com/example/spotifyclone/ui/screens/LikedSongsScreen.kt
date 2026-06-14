@@ -36,6 +36,7 @@ import com.example.spotifyclone.model.Song as MusicSong
 
 /**
  * LikedSongsScreen: Pantalla que muestra las canciones marcadas como "Favoritas".
+ * Permite reproducirlas todas en cadena o individualmente.
  */
 @Composable
 fun LikedSongsScreen(
@@ -48,7 +49,6 @@ fun LikedSongsScreen(
     val estadoUsuario by authViewModel.userState.collectAsState()
     val listaPlaylists by musicViewModel.playlists.collectAsState()
 
-    // Canción seleccionada para agregar a playlist
     var cancionParaPlaylist by remember { mutableStateOf<MusicSong?>(null) }
 
     LaunchedEffect(estadoUsuario.uid) {
@@ -66,38 +66,27 @@ fun LikedSongsScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver", tint = Color.White)
                 }
                 Spacer(Modifier.weight(1f))
-                // Botón buscar → va a la pantalla de búsqueda
                 IconButton(onClick = { navController.navigate(Screen.Search.route) }) {
                     Icon(Icons.Default.Search, "Buscar", tint = Color.White)
-                }
-                IconButton(onClick = {
-                    Toast.makeText(context, "Sin opciones adicionales", Toast.LENGTH_SHORT).show()
-                }) {
-                    Icon(Icons.Default.MoreVert, "Opciones", tint = Color.White)
                 }
             }
         }
     ) { rellenos ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(rellenos)) {
+            // Cabecera con degradado
             item {
                 CabeceraFavoritos(
                     cantidad = listaFavoritos.size,
                     alReproducirTodo = {
-                        listaFavoritos.firstOrNull()?.let {
-                            musicViewModel.playSong(it, listaFavoritos)
-                        }
+                        listaFavoritos.firstOrNull()?.let { musicViewModel.playSong(it, listaFavoritos) }
                     }
                 )
             }
 
+            // Si no hay favoritos, mostramos el "Empty State"
             if (listaFavoritos.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(top = 80.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Default.FavoriteBorder, null, tint = Color.Gray, modifier = Modifier.size(64.dp))
                             Spacer(Modifier.height(16.dp))
@@ -107,11 +96,15 @@ fun LikedSongsScreen(
                     }
                 }
             } else {
+                // Lista de favoritos cargada de Firebase
                 items(listaFavoritos) { cancion ->
                     ItemCancionFavorita(
                         cancion = cancion,
-                        alPulsar = { musicViewModel.playSong(cancion, listaFavoritos) },
-                        alQuitar = { musicViewModel.toggleFavorite(estadoUsuario.uid, cancion.id) },
+                        alPulsar = { 
+                            musicViewModel.playSong(cancion, listaFavoritos)
+                            musicViewModel.registrarReproduccion(estadoUsuario.uid, cancion)
+                        },
+                        alQuitar = { musicViewModel.toggleFavorite(estadoUsuario.uid, cancion) },
                         alAgregarACola = { musicViewModel.agregarALaCola(cancion) },
                         alAgregarAPlaylist = { cancionParaPlaylist = cancion }
                     )
@@ -122,57 +115,24 @@ fun LikedSongsScreen(
         }
     }
 
-    // Diálogo para seleccionar a qué playlist agregar la canción
-    cancionParaPlaylist?.let { cancion ->
-        AlertDialog(
-            onDismissRequest = { cancionParaPlaylist = null },
-            title = { Text("Agregar a playlist", color = Color.White) },
-            text = {
-                if (listaPlaylists.isEmpty()) {
-                    Text(
-                        "No tienes playlists aún.\nCrea una desde Tu Biblioteca.",
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center
-                    )
-                } else {
-                    LazyColumn {
-                        items(listaPlaylists) { playlist ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        musicViewModel.agregarCancionAPlaylist(
-                                            estadoUsuario.uid, playlist.id, cancion.id
-                                        )
-                                        cancionParaPlaylist = null
-                                        Toast.makeText(context, "Canción agregada a \"${playlist.name}\"", Toast.LENGTH_SHORT).show()
-                                    }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(Icons.Default.QueueMusic, null, tint = Color(0xFF1DB954))
-                                Spacer(Modifier.width(12.dp))
-                                Text(playlist.name, color = Color.White, fontSize = 16.sp)
-                            }
-                        }
-                    }
-                }
+    // Diálogo para mover de "Me gusta" a una Playlist
+    if (cancionParaPlaylist != null) {
+        PlaylistSelectionDialog(
+            playlists = listaPlaylists,
+            onPlaylistSelect = { pl ->
+                musicViewModel.agregarCancionAPlaylist(estadoUsuario.uid, pl.id, cancionParaPlaylist!!.id)
+                cancionParaPlaylist = null
+                Toast.makeText(context, "Añadida", Toast.LENGTH_SHORT).show()
             },
-            confirmButton = {
-                TextButton(onClick = { cancionParaPlaylist = null }) {
-                    Text("Cerrar", color = Color.Gray)
-                }
-            },
-            containerColor = Color(0xFF282828)
+            onDismiss = { cancionParaPlaylist = null }
         )
     }
 }
 
 @Composable
-fun CabeceraFavoritos(cantidad: Int, alReproducirTodo: () -> Unit = {}) {
+fun CabeceraFavoritos(cantidad: Int, alReproducirTodo: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
+        modifier = Modifier.fillMaxWidth()
             .background(brush = Brush.verticalGradient(colors = listOf(Color(0xFF503691), Color.Black)))
             .padding(16.dp)
     ) {
@@ -180,66 +140,33 @@ fun CabeceraFavoritos(cantidad: Int, alReproducirTodo: () -> Unit = {}) {
         Text("$cantidad canciones", color = Color.LightGray, fontSize = 14.sp)
         Spacer(Modifier.height(16.dp))
         Box(modifier = Modifier.fillMaxWidth()) {
-            // Botón Play ahora funcional
             Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF1DB954))
-                    .clickable { alReproducirTodo() },
+                modifier = Modifier.align(Alignment.CenterEnd).size(56.dp).clip(CircleShape).background(Color(0xFF1DB954)).clickable { alReproducirTodo() },
                 contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.PlayArrow, "Reproducir todas", tint = Color.Black, modifier = Modifier.size(32.dp))
-            }
+            ) { Icon(Icons.Default.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(32.dp)) }
         }
     }
 }
 
 @Composable
-fun ItemCancionFavorita(
-    cancion: MusicSong,
-    alPulsar: () -> Unit,
-    alQuitar: () -> Unit,
-    alAgregarACola: () -> Unit = {},
-    alAgregarAPlaylist: () -> Unit = {}
-) {
+fun ItemCancionFavorita(cancion: MusicSong, alPulsar: () -> Unit, alQuitar: () -> Unit, alAgregarACola: () -> Unit, alAgregarAPlaylist: () -> Unit) {
     var menuExpandido by remember { mutableStateOf(false) }
-
     Row(
         modifier = Modifier.fillMaxWidth().clickable { alPulsar() }.padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (cancion.coverUrl.isNotEmpty()) {
-            AsyncImage(cancion.coverUrl, null, Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
-        } else {
-            Image(painterResource(R.drawable.corazon), null, Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
-        }
+        AsyncImage(cancion.coverUrl, null, Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(cancion.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             Text(cancion.artist, color = Color.Gray, fontSize = 14.sp)
         }
-        // Botón corazón para quitar de favoritos
-        IconButton(onClick = { alQuitar() }) {
-            Icon(Icons.Default.Favorite, "Quitar de favoritos", tint = Color(0xFF1DB954))
-        }
-        // Menú de opciones
+        IconButton(onClick = alQuitar) { Icon(Icons.Default.Favorite, null, tint = Color(0xFF1DB954)) }
         Box {
-            IconButton(onClick = { menuExpandido = true }) {
-                Icon(Icons.Default.MoreVert, "Opciones", tint = Color.Gray)
-            }
-            DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
-                DropdownMenuItem(
-                    text = { Text("Agregar a la cola") },
-                    leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
-                    onClick = { alAgregarACola(); menuExpandido = false }
-                )
-                DropdownMenuItem(
-                    text = { Text("Agregar a playlist") },
-                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, null) },
-                    onClick = { alAgregarAPlaylist(); menuExpandido = false }
-                )
+            IconButton(onClick = { menuExpandido = true }) { Icon(Icons.Default.MoreVert, null, tint = Color.Gray) }
+            DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }, containerColor = Color(0xFF282828)) {
+                DropdownMenuItem(text = { Text("Agregar a la cola", color = Color.White) }, onClick = { alAgregarACola(); menuExpandido = false })
+                DropdownMenuItem(text = { Text("Agregar a playlist", color = Color.White) }, onClick = { alAgregarAPlaylist(); menuExpandido = false })
             }
         }
     }

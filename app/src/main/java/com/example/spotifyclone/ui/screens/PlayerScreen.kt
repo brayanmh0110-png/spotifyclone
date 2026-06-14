@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -21,16 +23,19 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import android.widget.Toast
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.ModoRepeticion
 import com.example.spotifyclone.viewmodel.MusicViewModel
+import com.example.spotifyclone.navigation.Screen
 
 /**
  * PlayerScreen: Pantalla completa del reproductor.
- * Se abre con una animación hacia arriba y muestra todos los controles de la canción actual.
+ * Es el componente más visual de la app, con degradados dinámicos y controles avanzados.
  */
 @Composable
 fun PlayerScreen(
@@ -38,8 +43,9 @@ fun PlayerScreen(
     musicViewModel: MusicViewModel,
     authViewModel: AuthViewModel
 ) {
-    // 1. Estados reactivos del reproductor
+    // --- OBTENCIÓN DE ESTADOS ---
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val cancionActual by musicViewModel.currentSong.collectAsState()
     val estaReproduciendo by musicViewModel.isPlaying.collectAsState()
     val posicionActual by musicViewModel.currentPosition.collectAsState()
@@ -49,17 +55,23 @@ fun PlayerScreen(
     val esModoAleatorio by musicViewModel.esModoAleatorio.collectAsState()
     val modoRepeticion by musicViewModel.modoRepeticion.collectAsState()
     val listaPlaylists by musicViewModel.playlists.collectAsState()
+    
+    // Obtener el color dinámico basado en la portada
+    val dominantColorInt by musicViewModel.dominantColor.collectAsState()
+    val colorFondo = Color(dominantColorInt)
 
     var menuExpandido by remember { mutableStateOf(false) }
     var cancionParaPlaylist by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
 
+    // Cargamos las playlists al entrar para el diálogo de "Agregar a playlist"
     LaunchedEffect(estadoUsuario.uid) {
         if (estadoUsuario.uid.isNotEmpty()) {
             musicViewModel.cargarPlaylists(estadoUsuario.uid)
         }
     }
 
-    // Si no hay canción, no dibujamos nada
+    // Si por alguna razón no hay canción seleccionada, no mostramos nada
     if (cancionActual == null) return
 
     val esFavorita = listaFavoritos.any { it.id == cancionActual?.id }
@@ -67,11 +79,14 @@ fun PlayerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(brush = Brush.verticalGradient(colors = listOf(Color(0xFF503691), Color.Black)))
-            .padding(24.dp),
+            .background(brush = Brush.verticalGradient(colors = listOf(colorFondo, Color.Black)))
+            .padding(horizontal = 24.dp)
+            .verticalScroll(scrollState),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Cabecera: Botón de bajar y Título de contexto
+        Spacer(Modifier.height(24.dp))
+        
+        // --- CABECERA (Header) ---
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Default.KeyboardArrowDown, "Cerrar", tint = Color.White, modifier = Modifier.size(32.dp))
@@ -81,21 +96,32 @@ fun PlayerScreen(
                 IconButton(onClick = { menuExpandido = true }) {
                     Icon(Icons.Default.MoreVert, "Opciones", tint = Color.White)
                 }
-                DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }) {
+                DropdownMenu(expanded = menuExpandido, onDismissRequest = { menuExpandido = false }, containerColor = Color(0xFF282828)) {
+                    // Opción: Compartir
                     DropdownMenuItem(
-                        text = { Text("Agregar a la cola") },
-                        leadingIcon = { Icon(Icons.Default.QueueMusic, null) },
+                        text = { Text("Compartir canción", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.Share, null, tint = Color.White) },
                         onClick = {
-                            cancionActual?.let { 
-                                musicViewModel.agregarALaCola(it)
-                                Toast.makeText(context, "Agregado a la cola", Toast.LENGTH_SHORT).show()
+                            cancionActual?.let {
+                                clipboardManager.setText(AnnotatedString("¡Escucha esta canción! ${it.title} - ${it.artist}"))
+                                Toast.makeText(context, "Enlace copiado al portapapeles", Toast.LENGTH_SHORT).show()
                             }
                             menuExpandido = false
                         }
                     )
+                    // Opción: Cola
                     DropdownMenuItem(
-                        text = { Text("Agregar a playlist") },
-                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, null) },
+                        text = { Text("Ver cola de reproducción", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.PlaylistPlay, null, tint = Color.White) },
+                        onClick = {
+                            navController.navigate(Screen.Queue.route)
+                            menuExpandido = false
+                        }
+                    )
+                    // Opción: Agregar a Playlist
+                    DropdownMenuItem(
+                        text = { Text("Agregar a playlist", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Default.PlaylistAdd, null, tint = Color.White) },
                         onClick = {
                             cancionParaPlaylist = true
                             menuExpandido = false
@@ -107,7 +133,7 @@ fun PlayerScreen(
 
         Spacer(Modifier.height(48.dp))
 
-        // Portada del álbum en grande
+        // --- PORTADA DEL ÁLBUM ---
         AsyncImage(
             model = cancionActual?.coverUrl,
             contentDescription = null,
@@ -117,15 +143,15 @@ fun PlayerScreen(
 
         Spacer(Modifier.height(48.dp))
 
-        // Info de Canción y Botón de Like
+        // --- TÍTULO Y BOTÓN DE LIKE ---
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(cancionActual?.title ?: "", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                Text(cancionActual?.artist ?: "", color = Color.LightGray, fontSize = 18.sp)
+                Text(cancionActual?.title ?: "", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(cancionActual?.artist ?: "", color = Color.LightGray, fontSize = 18.sp, maxLines = 1)
             }
             IconButton(onClick = { 
                 cancionActual?.let { 
-                    musicViewModel.toggleFavorite(estadoUsuario.uid, it.id)
+                    musicViewModel.toggleFavorite(estadoUsuario.uid, it)
                     val msg = if (esFavorita) "Eliminado de favoritos" else "Agregado a favoritos"
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
@@ -141,7 +167,7 @@ fun PlayerScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // --- BARRA DE PROGRESO (SLIDER) ---
+        // --- BARRA DE PROGRESO (Slider) ---
         Slider(
             value = posicionActual,
             onValueChange = { musicViewModel.seekTo(it) },
@@ -155,9 +181,9 @@ fun PlayerScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // --- CONTROLES DE REPRODUCCIÓN ---
+        // --- CONTROLES DE REPRODUCCIÓN (Play, Skip, Shuffle, Repeat) ---
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-            // Botón Aleatorio: verde cuando está activo
+            // Botón Aleatorio
             IconButton(onClick = { musicViewModel.alternarAleatorio() }) {
                 Icon(
                     imageVector = Icons.Default.Shuffle,
@@ -170,7 +196,7 @@ fun PlayerScreen(
                 Icon(Icons.Default.SkipPrevious, "Anterior", tint = Color.White, modifier = Modifier.size(48.dp))
             }
 
-            // Botón central de Play/Pause
+            // Botón CENTRAL Play/Pause
             Box(
                 modifier = Modifier.size(72.dp).clip(CircleShape).background(Color.White).clickable { musicViewModel.togglePlayPause() },
                 contentAlignment = Alignment.Center
@@ -182,7 +208,7 @@ fun PlayerScreen(
                 Icon(Icons.Default.SkipNext, "Siguiente", tint = Color.White, modifier = Modifier.size(48.dp))
             }
 
-            // Botón Repetir: verde y con ícono diferente según el modo activo
+            // Botón Repetir
             IconButton(onClick = { musicViewModel.cambiarModoRepeticion() }) {
                 Icon(
                     imageVector = if (modoRepeticion == ModoRepeticion.UNO) Icons.Default.RepeatOne else Icons.Default.Repeat,
@@ -191,9 +217,16 @@ fun PlayerScreen(
                 )
             }
         }
+
+        Spacer(Modifier.height(48.dp))
+
+        // --- SECCIÓN DE LETRAS (Lyrics) ---
+        LyricsSection(cancionActual?.title ?: "", colorFondo)
+
+        Spacer(Modifier.height(48.dp))
     }
 
-    // Diálogo para agregar la canción actual a una playlist
+    // --- DIÁLOGO PARA AGREGAR A PLAYLIST ---
     if (cancionParaPlaylist) {
         AlertDialog(
             onDismissRequest = { cancionParaPlaylist = false },
@@ -236,7 +269,46 @@ fun PlayerScreen(
 }
 
 /**
- * Convierte milisegundos en formato mm:ss para mostrar en pantalla.
+ * LyricsSection: Muestra la caja de letras debajo del reproductor.
+ */
+@Composable
+fun LyricsSection(songTitle: String, dominantColor: Color) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = dominantColor.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("Letras", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Disfruta de la música de $songTitle\n\n" +
+                "Las letras sincronizadas no están disponibles para esta canción en la versión de desarrollo.\n\n" +
+                "¡Canta a todo pulmón!",
+                color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold, lineHeight = 32.sp
+            )
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = { /* Compartir letras */ },
+                colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.1f)),
+                shape = RoundedCornerShape(20.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Share, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("COMPARTIR", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Convierte milisegundos en formato mm:ss (Ej: 185000 -> 03:05).
  */
 private fun formatearTiempo(milisegundos: Int): String {
     val totalSegundos = milisegundos / 1000

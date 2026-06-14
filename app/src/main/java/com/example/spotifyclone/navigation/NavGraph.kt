@@ -16,8 +16,8 @@ import com.example.spotifyclone.viewmodel.AuthViewModel
 import com.example.spotifyclone.viewmodel.MusicViewModel
 
 /**
- * Screen: Definición de las rutas de navegación de la aplicación.
- * El uso de una Sealed Class garantiza seguridad de tipos y evita errores de texto.
+ * Screen: Clase sellada que define todas las rutas (direcciones) de la app.
+ * Esto evita errores de escritura al navegar entre pantallas.
  */
 sealed class Screen(val route: String) {
     data object Welcome : Screen("welcome")
@@ -30,17 +30,23 @@ sealed class Screen(val route: String) {
     data object LikedSongs : Screen("liked_songs")
     data object Player : Screen("player")
     data object Library : Screen("library")
+    data object Queue : Screen("queue")
     data object CreatePlaylist : Screen("create_playlist")
     data object Search : Screen("search")
     data object ActivityLog : Screen("activity_log")
+    
+    // Rutas con parámetros dinámicos (ID del artista o ID de la playlist)
+    data object ArtistDetail : Screen("artist_detail/{artistId}") {
+        fun crearRuta(artistId: String) = "artist_detail/$artistId"
+    }
     data object PlaylistDetail : Screen("playlist_detail/{playlistId}") {
         fun crearRuta(playlistId: String) = "playlist_detail/$playlistId"
     }
 }
 
 /**
- * SpotifyNavHost: El mapa de navegación de la aplicación.
- * Define qué pantalla mostrar según la ruta activa y cómo transicionar entre ellas.
+ * SpotifyNavHost: Es el "controlador de tráfico" de la aplicación.
+ * Aquí se registra cada pantalla y se define su animación de entrada/salida.
  */
 @Composable
 fun SpotifyNavHost(
@@ -51,12 +57,13 @@ fun SpotifyNavHost(
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Welcome.route,
+        startDestination = Screen.Welcome.route, // La app empieza en la pantalla de Bienvenida
         modifier = modifier,
+        // Animaciones globales por defecto
         enterTransition = { fadeIn(animationSpec = tween(300)) },
         exitTransition = { fadeOut(animationSpec = tween(300)) }
     ) {
-        // --- FLUJO DE BIENVENIDA Y AUTENTICACIÓN ---
+        // --- SECCIÓN: AUTENTICACIÓN ---
         
         composable(Screen.Welcome.route) {
             WelcomeScreen(navController = navController)
@@ -71,154 +78,74 @@ fun SpotifyNavHost(
                 slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
             }
         ) {
-            RegisterScreen(
-                navController = navController, 
-                authViewModel = authViewModel
-            )
+            RegisterScreen(navController = navController, authViewModel = authViewModel)
         }
         
-        composable(
-            route = Screen.LoginOptions.route,
-            enterTransition = {
-                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
-            },
-            exitTransition = {
-                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
-            }
-        ) {
+        composable(Screen.LoginOptions.route) {
             LoginOptionsScreen(navController = navController)
         }
         
-        composable(
-            Screen.LoginEmail.route,
-            enterTransition = {
-                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
-            },
-            exitTransition = {
-                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
-            }
-        ) {
-            LoginEmailScreen(
-                navController = navController, 
-                authViewModel = authViewModel
-            )
+        composable(Screen.LoginEmail.route) {
+            LoginEmailScreen(navController = navController, authViewModel = authViewModel)
         }
         
-        // --- PANTALLAS PRINCIPALES (POST-LOGIN) ---
+        // --- SECCIÓN: PANTALLAS PRINCIPALES ---
         
-        composable(
-            Screen.Home.route,
-            enterTransition = { fadeIn(tween(300)) },
-            exitTransition = { fadeOut(tween(300)) }
-        ) {
-            HomeScreen(
-                navController = navController, 
-                musicViewModel = musicViewModel, 
-                authViewModel = authViewModel
-            )
+        composable(Screen.Home.route) {
+            HomeScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
         
         composable(
             Screen.AlbumDetail.route,
             enterTransition = {
                 slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Up, animationSpec = tween(500))
-            },
-            exitTransition = {
-                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Down, animationSpec = tween(500))
             }
         ) {
-            AlbumDetailScreen(
-                navController = navController,
-                musicViewModel = musicViewModel,
-                authViewModel = authViewModel
-            )
+            AlbumDetailScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
         
-        // Panel de usuario como diálogo (overlay)
+        // El panel de usuario se muestra como un Diálogo (pop-up)
         dialog(
             route = Screen.Panelusu.route,
             dialogProperties = DialogProperties(usePlatformDefaultWidth = false)
         ) {
-            PanelUsuScreen(
-                navController = navController, 
-                authViewModel = authViewModel
-            )
+            PanelUsuScreen(navController = navController, authViewModel = authViewModel)
         }
         
-        composable(
-            Screen.LikedSongs.route,
-            enterTransition = {
-                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
-            },
-            exitTransition = {
-                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
-            }
-        ) {
-            LikedSongsScreen(
-                navController = navController, 
-                authViewModel = authViewModel, 
-                musicViewModel = musicViewModel
-            )
+        composable(Screen.LikedSongs.route) {
+            LikedSongsScreen(navController = navController, authViewModel = authViewModel, musicViewModel = musicViewModel)
         }
 
-        composable(
-            Screen.Library.route,
-            enterTransition = { fadeIn(tween(300)) },
-            exitTransition = { fadeOut(tween(300)) }
-        ) {
-            LibraryScreen(
-                navController = navController,
-                musicViewModel = musicViewModel,
-                authViewModel = authViewModel
-            )
+        composable(Screen.Library.route) {
+            LibraryScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
 
         composable(Screen.CreatePlaylist.route) {
-            CrearPlaylistScreen(
-                navController = navController,
-                musicViewModel = musicViewModel,
-                authViewModel = authViewModel
-            )
+            CrearPlaylistScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
 
-        composable(
-            Screen.PlaylistDetail.route,
-            enterTransition = {
-                slideIntoContainer(towards = AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(500))
-            },
-            exitTransition = {
-                slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(500))
-            }
-        ) { backStackEntry ->
+        composable(Screen.Queue.route) {
+            QueueScreen(navController = navController, musicViewModel = musicViewModel)
+        }
+
+        composable(Screen.PlaylistDetail.route) { backStackEntry ->
             val playlistId = backStackEntry.arguments?.getString("playlistId") ?: ""
-            PlaylistScreen(
-                playlistId = playlistId,
-                navController = navController,
-                musicViewModel = musicViewModel,
-                authViewModel = authViewModel
-            )
+            PlaylistScreen(playlistId = playlistId, navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
 
-        composable(
-            Screen.Search.route,
-            enterTransition = { fadeIn(tween(300)) },
-            exitTransition = { fadeOut(tween(300)) }
-        ) {
-            SearchScreen(
-                navController = navController, 
-                musicViewModel = musicViewModel
-            )
+        composable(Screen.Search.route) {
+            SearchScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
 
         composable(Screen.ActivityLog.route) {
-            ActivityLogScreen(
-                navController = navController,
-                musicViewModel = musicViewModel,
-                authViewModel = authViewModel
-            )
+            ActivityLogScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
 
-        // --- REPRODUCTOR A PANTALLA COMPLETA ---
+        composable(Screen.ArtistDetail.route) {
+            ArtistDetailScreen(navController = navController, musicViewModel = musicViewModel)
+        }
+
+        // --- SECCIÓN: REPRODUCTOR ---
         
         composable(
             route = Screen.Player.route,
@@ -229,11 +156,7 @@ fun SpotifyNavHost(
                 slideOutOfContainer(towards = AnimatedContentTransitionScope.SlideDirection.Down, animationSpec = tween(500))
             }
         ) {
-            PlayerScreen(
-                navController = navController, 
-                musicViewModel = musicViewModel, 
-                authViewModel = authViewModel
-            )
+            PlayerScreen(navController = navController, musicViewModel = musicViewModel, authViewModel = authViewModel)
         }
     }
 }

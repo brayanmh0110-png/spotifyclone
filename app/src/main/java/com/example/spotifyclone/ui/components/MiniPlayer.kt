@@ -25,6 +25,10 @@ import androidx.navigation.NavHostController
 import com.example.spotifyclone.navigation.Screen
 import androidx.compose.foundation.clickable
 
+/**
+ * MiniPlayer: El reproductor flotante que aparece en la parte inferior.
+ * Permite controlar la música mientras navegas por otras secciones de la app.
+ */
 @Composable
 fun MiniPlayer(musicViewModel: MusicViewModel, navController: NavHostController) {
     val currentSong by musicViewModel.currentSong.collectAsState()
@@ -32,74 +36,43 @@ fun MiniPlayer(musicViewModel: MusicViewModel, navController: NavHostController)
     val currentPosition by musicViewModel.currentPosition.collectAsState()
     val duration by musicViewModel.duration.collectAsState()
 
+    // Si no hay nada sonando, el mini reproductor no se muestra
     if (currentSong == null) return
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp)
-            .height(64.dp) // Aumentamos un poco el alto para la barra
-            .clickable {
-                navController.navigate(Screen.Player.route)
-            },
+            .height(64.dp)
+            .clickable { navController.navigate(Screen.Player.route) }, // Al pulsar, abre el reproductor completo
         color = Color(0xFF282828),
         shape = RoundedCornerShape(8.dp)
     ) {
         Column {
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Imagen de la canción desde la URL
-                AsyncImage(
-                    model = currentSong?.coverUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color.Gray),
-                    contentScale = ContentScale.Crop
-                )
+                AsyncImage(model = currentSong?.coverUrl, null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)).background(Color.Gray), contentScale = ContentScale.Crop)
                 
                 Spacer(modifier = Modifier.width(12.dp))
                 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = currentSong?.title ?: "",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = currentSong?.artist ?: "",
-                        color = Color.Gray,
-                        fontSize = 12.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Text(text = currentSong?.title ?: "", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(text = currentSong?.artist ?: "", color = Color.Gray, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 
+                // Botón de Play/Pause rápido
                 IconButton(onClick = { musicViewModel.togglePlayPause() }) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "Play/Pause",
-                        tint = Color.White
-                    )
+                    Icon(imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, "Play/Pause", tint = Color.White)
                 }
             }
             
-            // Barra de progreso (Spotify style)
+            // --- BARRA DE PROGRESO MINI ---
             val progress = if (duration > 0) currentPosition / duration else 0f
             LinearProgressIndicator(
                 progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(2.dp)
-                    .padding(horizontal = 8.dp),
+                modifier = Modifier.fillMaxWidth().height(2.dp).padding(horizontal = 8.dp),
                 color = Color.White,
                 trackColor = Color.Gray.copy(alpha = 0.3f),
             )
